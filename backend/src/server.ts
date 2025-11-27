@@ -20,15 +20,26 @@ async function startServer() {
     }
 
     // Start the server
-    const PORT = config.port;
+    const PORT = process.env.PORT || config.port || 3000;
     
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT} in ${config.nodeEnv} mode`);
       logger.info(`📚 Grades 1 and 3 TX and TM records API ready at http://localhost:${PORT}`);
       logger.info(`🔍 Health check available at http://localhost:${PORT}/health`);
       logger.info(`📖 API documentation available at http://localhost:${PORT}/api-docs`);
     });
-
+    
+    // Handle server errors
+    server.on('error', (error) => {
+      logger.error('Server error:', error);
+      process.exit(1);
+    });
+    
+    // Handle server close
+    server.on('close', () => {
+      logger.info('Server closed');
+    });
+    
   } catch (error) {
     logger.error('Failed to start server', error);
     process.exit(1);

@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # Install PostgreSQL client for migrations
-RUN apk add --no-cache postgresql-client
+RUN apk add --no-cache postgresql-client curl
 
 # Create app directory
 WORKDIR /app
@@ -25,12 +25,12 @@ RUN npm prune --production
 # Create logs directory
 RUN mkdir -p logs
 
-# Expose port
-EXPOSE 3000
+# Expose port (use PORT environment variable or default to 3000)
+EXPOSE ${PORT:-3000}
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]
