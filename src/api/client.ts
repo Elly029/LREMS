@@ -57,7 +57,12 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    // Ensure baseURL doesn't have a trailing slash
+    const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+    // Ensure endpoint starts with a slash
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    const url = `${cleanBaseURL}${cleanEndpoint}`;
 
     // Create AbortController for timeout
     const controller = new AbortController();
