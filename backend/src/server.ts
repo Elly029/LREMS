@@ -13,7 +13,7 @@ async function startServer() {
     // Connect to MongoDB
     logger.info('Connecting to MongoDB...');
     const dbConnected = await connectDatabase();
-    
+
     if (!dbConnected) {
       logger.error('Failed to connect to MongoDB. Exiting...');
       process.exit(1);
@@ -21,25 +21,26 @@ async function startServer() {
 
     // Start the server
     const PORT = process.env.PORT || config.port || 3000;
-    
-    const server = app.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT} in ${config.nodeEnv} mode`);
-      logger.info(`📚 Grades 1 and 3 TX and TM records API ready at http://localhost:${PORT}`);
-      logger.info(`🔍 Health check available at http://localhost:${PORT}/health`);
-      logger.info(`📖 API documentation available at http://localhost:${PORT}/api-docs`);
+    const HOST = '0.0.0.0'; // Required for Railway and containerized deployments
+
+    const server = app.listen(PORT, HOST, () => {
+      logger.info(`🚀 Server running on ${HOST}:${PORT} in ${config.nodeEnv} mode`);
+      logger.info(`📚 LR-EMS API ready`);
+      logger.info(`🔍 Health check available at /health`);
+      logger.info(`📖 API base URL: /api`);
     });
-    
+
     // Handle server errors
     server.on('error', (error) => {
       logger.error('Server error:', error);
       process.exit(1);
     });
-    
+
     // Handle server close
     server.on('close', () => {
       logger.info('Server closed');
     });
-    
+
   } catch (error) {
     logger.error('Failed to start server', error);
     process.exit(1);
