@@ -20,7 +20,7 @@ async function startServer() {
     }
 
     // Start the server
-    const PORT = process.env.PORT || config.port || 3000;
+    const PORT = Number(process.env.PORT) || config.port || 3000;
     const HOST = '0.0.0.0'; // Required for Railway and containerized deployments
 
     const server = app.listen(PORT, HOST, () => {
