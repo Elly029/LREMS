@@ -142,21 +142,8 @@ app.use('/api/evaluators', evaluatorsRouter);
 app.use('/api/monitoring', evaluationMonitoringRouter);
 app.use('/api/evaluator-dashboard', evaluatorDashboardRouter);
 
-// Serve static files in production
-if (config.nodeEnv === 'production') {
-  const path = require('path');
-  // Serve static files from the React app
-  app.use(express.static(path.join(__dirname, '../../dist')));
-
-  // The "catchall" handler: for any request that doesn't
-  // match one above, send back React's index.html file.
-  app.get('*', (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../../dist/index.html'));
-  });
-} else {
-  // 404 handler for development (or if not serving static)
-  app.use('*', notFoundHandler);
-}
+// 404 handler
+app.use('*', notFoundHandler);
 
 // Global error handler
 app.use(errorHandler);
