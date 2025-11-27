@@ -183,6 +183,34 @@ router.post('/create-evaluator-accounts', protect, async (req: Request, res: Res
     }
 });
 
+// Fix email index issue (one-time use)
+router.post('/fix-email-index', async (req: Request, res: Response) => {
+    try {
+        const { secretKey } = req.body;
+        if (secretKey !== 'SEED_LREMS_2025') {
+            return res.status(403).json({ message: 'Invalid secret key' });
+        }
+
+        // Drop the problematic email index
+        const mongoose = require('mongoose');
+        const collection = mongoose.connection.collection('users');
+
+        try {
+            await collection.dropIndex('email_1');
+            res.json({ message: 'Email index dropped successfully. Now run seed-users.' });
+        } catch (err: any) {
+            if (err.code === 27) {
+                res.json({ message: 'Index does not exist, proceed with seed-users.' });
+            } else {
+                throw err;
+            }
+        }
+    } catch (error: any) {
+        console.error('Fix index error:', error);
+        res.status(500).json({ message: 'Failed to fix index', error: error.message });
+    }
+});
+
 // Seed initial admin users (Remove after first use in production)
 router.post('/seed-users', async (req: Request, res: Response) => {
     try {
