@@ -25,64 +25,27 @@ const app: Application = express();
 // Trust proxy for accurate IP addresses
 app.set('trust proxy', 1);
 
-// CORS configuration - Move to top
+// CORS configuration
 const allowedOrigins = [
   config.corsOrigin,
   'https://lrems.up.railway.app',
   'http://localhost:5173',
   'http://localhost:4173'
-];
+].filter(Boolean); // Ensure no falsy values
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps or curl requests) or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // For development, you might want to be more permissive
-      // But in production, be strict
-      if (config.nodeEnv === 'development') {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-
-// Handle preflight requests explicitly
-app.options('*', (req, res) => {
-  const origin = req.get('Origin');
-
-  // Set CORS headers for preflight requests
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    // For requests with no origin, allow all
-    res.header('Access-Control-Allow-Origin', '*');
-  } else {
-    // In development, be more permissive
-    if (config.nodeEnv === 'development') {
-      res.header('Access-Control-Allow-Origin', origin);
-    } else {
-      res.header('Access-Control-Allow-Origin', 'null');
-    }
-  }
-
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-
-  res.sendStatus(200);
-});
 
 // Security middleware
 app.use(helmet({
