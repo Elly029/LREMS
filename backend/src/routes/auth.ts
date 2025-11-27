@@ -22,24 +22,40 @@ router.post('/login', async (req: Request, res: Response) => {
     try {
         const { username, password } = req.body;
 
+        // Validate input
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
+
         const user = await User.findOne({ username });
 
-        if (user && (await bcrypt.compare(password, user.password))) {
-            res.json({
-                _id: user._id,
-                username: user.username,
-                name: user.name,
-                access_rules: user.access_rules,
-                is_admin_access: user.is_admin_access,
-                evaluator_id: user.evaluator_id,
-                token: generateToken((user._id as unknown) as string),
-            });
-        } else {
-            res.status(401).json({ message: 'Invalid username or password' });
+        // Check if user exists
+        if (!user) {
+            console.log(`Login attempt failed: User ${username} not found`);
+            return res.status(401).json({ message: 'Invalid username or password' });
         }
+
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            console.log(`Login attempt failed: Invalid password for user ${username}`);
+            return res.status(401).json({ message: 'Invalid username or password' });
+        }
+
+        // Successful login
+        console.log(`User ${username} logged in successfully`);
+        res.json({
+            _id: user._id,
+            username: user.username,
+            name: user.name,
+            access_rules: user.access_rules,
+            is_admin_access: user.is_admin_access,
+            evaluator_id: user.evaluator_id,
+            token: generateToken((user._id as unknown) as string),
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error during authentication' });
     }
 });
 

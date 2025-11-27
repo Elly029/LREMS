@@ -38,21 +38,15 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    console.log('CORS check for origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-
     // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
-      console.log('Origin allowed');
       callback(null, true);
     } else {
       // For development, you might want to be more permissive
       // But in production, be strict
       if (config.nodeEnv === 'development') {
-        console.warn(`CORS allowed in development for origin: ${origin}`);
         callback(null, true);
       } else {
-        console.warn(`CORS blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     }
@@ -67,23 +61,16 @@ app.use(cors({
 app.options('*', (req, res) => {
   const origin = req.get('Origin');
 
-  console.log('Preflight request received from origin:', origin);
-  console.log('Allowed origins:', allowedOrigins);
-
   // Set CORS headers for preflight requests
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
-    console.log('Setting CORS header for allowed origin:', origin);
   } else if (!origin) {
     // For requests with no origin, allow all
     res.header('Access-Control-Allow-Origin', '*');
-    console.log('Setting CORS header for no origin');
   } else {
-    console.log('Origin not allowed:', origin);
     // In development, be more permissive
     if (config.nodeEnv === 'development') {
       res.header('Access-Control-Allow-Origin', origin);
-      console.log('Allowing origin in development mode:', origin);
     } else {
       res.header('Access-Control-Allow-Origin', 'null');
     }
@@ -94,7 +81,6 @@ app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400'); // 24 hours
 
-  console.log('Sending preflight response with headers:', res.getHeaders());
   res.sendStatus(200);
 });
 
