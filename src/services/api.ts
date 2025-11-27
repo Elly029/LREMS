@@ -1,6 +1,8 @@
 import { Status } from '../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// Ensure API_BASE_URL is properly formatted (no trailing slash)
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+export const API_BASE_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 export const REQUEST_TIMEOUT = 10000;
 
 export interface ApiResponse<T = any> {
@@ -31,7 +33,11 @@ export class ApiClient {
     }
 
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const url = `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+        // Ensure baseURL doesn't have a trailing slash
+        const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+        // Ensure endpoint starts with a slash
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const url = `${cleanBaseURL}${cleanEndpoint}`;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -96,7 +102,9 @@ export class ApiClient {
         }
 
         const queryString = searchParams.toString();
-        const url = queryString ? `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}?${queryString}` : `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+        const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const url = queryString ? `${cleanBaseURL}${cleanEndpoint}?${queryString}` : `${cleanBaseURL}${cleanEndpoint}`;
 
         return this.request<T>(url, { method: 'GET' });
     }
