@@ -1,0 +1,198 @@
+import React, { useState, useRef, useEffect } from 'react';
+import logo from '../assets/logo.png';
+import { TourGuide } from './TourGuide';
+
+interface LayoutProps {
+    children: React.ReactNode;
+    user?: { name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
+    onLogout?: () => void;
+    onChangePassword?: () => void;
+    currentView: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard';
+    onViewChange: (view: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard') => void;
+    onStartEvaluatorTour?: () => void;
+}
+
+export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChangePassword, currentView, onViewChange, onStartEvaluatorTour }) => {
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isTourActive, setIsTourActive] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Auto-start tour for first-time users
+    useEffect(() => {
+        const hasSeenTour = localStorage.getItem('hasSeenTour');
+        if (!hasSeenTour && user) {
+            // Small delay to ensure UI is ready
+            const timer = setTimeout(() => {
+                setIsTourActive(true);
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [user]);
+
+    return (
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+            <TourGuide
+                startTour={isTourActive}
+                onTourEnd={() => {
+                    setIsTourActive(false);
+                    localStorage.setItem('hasSeenTour', 'true');
+                }}
+            />
+
+            {/* Top Navigation Bar */}
+            <nav className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+                    <div className="flex justify-between items-center h-14 sm:h-16">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12">
+                                <img src={logo} alt="Logo" className="h-full w-full object-contain" />
+                            </div>
+                            <div className="min-w-0 flex-shrink-0">
+                                <h1 className="text-sm sm:text-base lg:text-xl font-bold text-primary-600 tracking-tight truncate">
+                                    <span className="hidden sm:inline">Learning Resource Evaluation Management System</span>
+                                    <span className="sm:hidden">LR-EMS</span>
+                                </h1>
+                                <p className="text-xs text-gray-500 font-medium hidden sm:block">Grades 1 & 3 Records</p>
+                            </div>
+
+
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                            {user && (
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="text-right hidden md:block">
+                                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                        <div className="text-xs text-gray-500">@{user.username}</div>
+                                    </div>
+                                    <div className="relative" ref={dropdownRef}>
+                                        <button
+                                            id="user-menu-btn"
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className="flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-primary-100 text-primary-600 font-bold hover:bg-primary-200 transition-colors text-sm sm:text-base"
+                                        >
+                                            {user.name.charAt(0)}
+                                        </button>
+                                        {isDropdownOpen && (
+                                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
+                                                <div className="px-4 py-2 border-b border-gray-100 md:hidden">
+                                                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                                    <div className="text-xs text-gray-500">@{user.username}</div>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsDropdownOpen(false);
+                                                        // Context-aware tour start
+                                                        if (currentView === 'evaluator-dashboard' && onStartEvaluatorTour) {
+                                                            onStartEvaluatorTour();
+                                                        } else {
+                                                            onViewChange('inventory');
+                                                            setIsTourActive(true);
+                                                        }
+                                                    }}
+                                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                >
+                                                    Start Tour
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsDropdownOpen(false);
+                                                        onChangePassword?.();
+                                                    }}
+                                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                >
+                                                    Change Password
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsDropdownOpen(false);
+                                                        onLogout?.();
+                                                    }}
+                                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                                >
+                                                    Sign out
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            {/* Main Content Area */}
+            <main className="flex-grow">
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+                    {/* Navigation Tabs */}
+                    <div className="mb-6 border-b border-gray-200 overflow-x-auto no-scrollbar">
+                        <div className="flex space-x-8 min-w-max">
+                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                                <button
+                                    onClick={() => onViewChange('inventory')}
+                                    className={`${currentView === 'inventory' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Inventory
+                                </button>
+                            )}
+                            {user && (user.is_admin_access || user.evaluator_id) && (
+                                <button
+                                    onClick={() => onViewChange('evaluator-dashboard')}
+                                    className={`${currentView === 'evaluator-dashboard' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Evaluator Dashboard
+                                </button>
+                            )}
+                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                                <button
+                                    onClick={() => onViewChange('monitoring')}
+                                    className={`${currentView === 'monitoring' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Evaluation Monitoring
+                                </button>
+                            )}
+                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                                <button
+                                    onClick={() => onViewChange('evaluators')}
+                                    className={`${currentView === 'evaluators' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Evaluators
+                                </button>
+                            )}
+                            {user && (user.is_admin_access || ['jc', 'nonie', 'admin-l', 'admin-c'].includes(user.username?.toLowerCase() || '')) && (
+                                <button
+                                    onClick={() => onViewChange('create-evaluation')}
+                                    className={`${currentView === 'create-evaluation' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Admin Access
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    {children}
+                </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="bg-white border-t border-gray-200 mt-auto">
+                <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 lg:px-8">
+                    <p className="text-center text-xs sm:text-sm text-gray-400">
+                        &copy; {new Date().getFullYear()} Book Data Management System. All rights reserved.
+                    </p>
+                </div>
+            </footer>
+        </div>
+    );
+};

@@ -1,0 +1,202 @@
+{
+  "migrationSummary": {
+    "timestamp": "2025-11-19T07:52:36.637Z",
+    "totalRecords": 68,
+    "successfullyInserted": 68,
+    "skipped": 0,
+    "duplicates": 0,
+    "errors": 0,
+    "errorRate": "0.00%",
+    "successRate": "100.00%"
+  },
+  "verification": {
+    "totalBooks": 68,
+    "grade1Books": 23,
+    "grade3Books": 45,
+    "recentSampleBooks": [
+      "25G1-M002",
+      "25G1-M008",
+      "25G1-M005",
+      "25G1-M006",
+      "25G1-M007"
+    ],
+    "recentBooks": [
+      {
+        "_id": "691d77448c162adcfcd31101",
+        "book_code": "25G1-M002",
+        "learning_area": "MATH",
+        "grade_level": 1,
+        "publisher": "SIBS PUBLISHING HOUSE",
+        "title": "Integrative Math Proficient 21st Century Learners",
+        "status": "For Revision",
+        "remarks": "\"Transmitted the TX and TM to Publisher 11/05/25; Expected Book Return: November 20\"",
+        "is_new": true,
+        "__v": 0,
+        "created_at": "2025-11-19T07:52:36.433Z",
+        "updated_at": "2025-11-19T07:52:36.433Z"
+      },
+      {
+        "_id": "691d77448c162adcfcd31100",
+        "book_code": "25G1-M008",
+        "learning_area": "MATH",
+        "grade_level": 1,
+        "publisher": "MERRYLAND PUBLISHING CORPORATION",
+        "title": "Fun in Learning Mathematics",
+        "status": "For Revision",
+        "remarks": "\"Transmitted the TX and TM to Publisher 11/05/25; Expected Book Return: November 19\"",
+        "is_new": true,
+        "__v": 0,
+        "created_at": "2025-11-19T07:52:36.433Z",
+        "updated_at": "2025-11-19T07:52:36.433Z"
+      },
+      {
+        "_id": "691d77448c162adcfcd31103",
+        "book_code": "25G1-M005",
+        "learning_area": "MATH",
+        "grade_level": 1,
+        "publisher": "EDURESOURCES PUBLISHING, INC.",
+        "title": "Fun with Math",
+        "status": "For Revision",
+        "remarks": "Transmitted the TX and TM to Publisher 11/04/25; Area 1 and 2 TX will transmit to Publisher on or before November 5, 2025 *Areas 1 and 2 TX was released 11/06/2025 Expected Book Return: November 19 SFRR Sent 11/05/2025",
+        "is_new": true,
+        "__v": 0,
+        "created_at": "2025-11-19T07:52:36.433Z",
+        "updated_at": "2025-11-19T07:52:36.433Z"
+      },
+      {
+        "_id": "691d77448c162adcfcd31102",
+        "book_code": "25G1-M006",
+        "learning_area": "MATH",
+        "grade_level": 1,
+        "publisher": "BOOKS ON WHEELS ENTERPRISES, INC.",
+        "title": "Developing My Math Skills",
+        "status": "For Revision",
+        "remarks": "\"Transmitted the TX and TM to Publisher 11/05/25; Expected Book Return: November 20\" Returned: 11/19/25 - 4TXTM and Old TXTM with marginal notes",
+        "is_new": true,
+        "__v": 0,
+        "created_at": "2025-11-19T07:52:36.433Z",
+        "updated_at": "2025-11-19T07:52:36.433Z"
+      },
+      {
+        "_id": "691d77448c162adcfcd310ff",
+        "book_code": "25G1-M007",
+        "learning_area": "MATH",
+        "grade_level": 1,
+        "publisher": "J.C. PALABAY ENTERPRISES, INC.",
+        "title": "Journey to Mathematics",
+        "status": "For Revision",
+        "remarks": "\"Transmitted the TX and TM to Publisher 11/05/25; Expected Book Return: November 19\"",
+        "is_new": true,
+        "__v": 0,
+        "created_at": "2025-11-19T07:52:36.433Z",
+        "updated_at": "2025-11-19T07:52:36.433Z"
+      }
+    ]
+  },
+  "detailedLogs": {
+    "executionTime": "2025-11-19T07:52:34.854Z",
+    "duration": "1783ms",
+    "totalLogs": 14,
+    "logs": [
+      {
+        "timestamp": "2025-11-19T07:52:34.855Z",
+        "level": "info",
+        "message": "Starting MongoDB Migration Process",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:34.858Z",
+        "level": "info",
+        "message": "Data file: extracted-books.json",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:34.858Z",
+        "level": "info",
+        "message": "MongoDB URI: mongodb+srv://***:***@lrms.zuoxo.mongodb.net/book_management?retryWrites=true&w=majority&appName=LRMS",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:34.858Z",
+        "level": "info",
+        "message": "Connecting to MongoDB Atlas...",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.067Z",
+        "level": "success",
+        "message": "Connected to MongoDB Atlas successfully",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.067Z",
+        "level": "info",
+        "message": "Loading extracted book data...",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.073Z",
+        "level": "success",
+        "message": "Loaded 68 book records from extracted-books.json",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.073Z",
+        "level": "info",
+        "message": "Checking for existing book codes...",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.395Z",
+        "level": "info",
+        "message": "Found 0 existing book codes",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.396Z",
+        "level": "info",
+        "message": "Starting bulk insert process...",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.504Z",
+        "level": "info",
+        "message": "Batch 1/1 completed",
+        "details": {
+          "processed": 68,
+          "inserted": 68,
+          "skipped": 0
+        }
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.504Z",
+        "level": "success",
+        "message": "Bulk insert completed",
+        "details": {
+          "total": 68,
+          "inserted": 68,
+          "skipped": 0,
+          "duplicates": 0,
+          "errors": 0
+        }
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.504Z",
+        "level": "info",
+        "message": "Verifying migration...",
+        "details": null
+      },
+      {
+        "timestamp": "2025-11-19T07:52:36.637Z",
+        "level": "success",
+        "message": "Migration verification completed",
+        "details": null
+      }
+    ]
+  },
+  "recommendations": [
+    "All records processed successfully",
+    "No duplicate records found",
+    "Database verification passed"
+  ]
+}

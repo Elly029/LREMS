@@ -1,0 +1,40 @@
+Connecting to database...
+[2025-11-20T06:39:56.572Z] [INFO] Mongoose connected to MongoDB
+[2025-11-20T06:39:56.575Z] [INFO] Γ£à MongoDB connection successful
+
+Fetching all distinct publishers...
+
+Found 24 distinct publishers:
+
+1. ACFA Enterprises
+2. BOOK CHOICE PUBLISHING, INC.
+3. BOOKS ON WHEELS ENTERPRISES, INC.
+4. Dane Publishing House, Inc.
+5. Diwa Innovation in Education
+6. EDURESOURCES PUBLISHING, INC.
+7. Ephesians Publishing Inc.
+8. Hope Publishing House
+9. J.C. PALABAY ENTERPRISES, INC.
+10. Johnny and Hansel Publications
+11. LEARNOVATE INC.
+12. Magallanes Publishing House
+13. MERRYLAND PUBLISHING CORPORATION
+14. Mexico Printing Company Inc.
+15. MKG Publishing
+16. PLATINUM PUBLICATION
+17. Rex Book Store, Inc.
+18. REX PRINTING COMPANY, INC.
+19. S Trix General Merchandise
+20. Sibs Publishing House, Inc.
+21. Techfactors
+22. The Inteligente Publishing, Inc.
+23. Valleybooks OPC
+24. VIBAL FOUNDATION, INC.
+
+
+=== POTENTIAL DUPLICATES (Case-Insensitive) ===
+
+No duplicate publishers found.
+
+
+Disconnected from database.

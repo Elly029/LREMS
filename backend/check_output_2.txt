@@ -1,0 +1,23 @@
+Connected to MongoDB
+Total books in DB: 68
+Found 1 books with code '25G3-S001':
+{
+  "_id": "691d77448c162adcfcd310d3",
+  "book_code": "25G3-S001",
+  "learning_area": "Science",
+  "grade_level": 3,
+  "publisher": "Sibs Publishing House, Inc.",
+  "title": "Agham Para sa Lahat",
+  "status": "For FRR and Signing Off",
+  "remarks": "Done with ROR, TXTM Signed off, but with comments. Confirm to Sir JC the 2nd revised copy of the TX and TM.",
+  "is_new": true,
+  "__v": 0,
+  "created_at": "2025-11-19T07:52:36.431Z",
+  "updated_at": "2025-11-19T07:52:36.431Z"
+}
+'book_code' length: 9
+'book_code' chars: 50, 53, 71, 51, 45, 83, 48, 48, 49
+'learning_area' length: 7
+'learning_area' chars: 83, 99, 105, 101, 110, 99, 101
+Matches /Science/i? true
+Equals 'Science'? true

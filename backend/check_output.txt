@@ -1,0 +1,23 @@
+Found 3 books matching 'Science' or code '25G3-S002':
+
+Code: '25G3-S001'
+  Area: 'Science' (chars: 83, 99, 105, 101, 110, 99, 101)
+  Grade: 3
+  Publisher: 'Sibs Publishing House, Inc.'
+  Title: 'Agham Para sa Lahat'
+  Status: 'For FRR and Signing Off'
+
+Code: '25G3-S002'
+  Area: 'Science' (chars: 83, 99, 105, 101, 110, 99, 101)
+  Grade: 3
+  Publisher: 'J.C. PALABAY ENTERPRISES, INC.'
+  Title: 'Siyensya at Pamana'
+  Status: 'For ROR'
+
+Code: '25G3-S003'
+  Area: 'Science' (chars: 83, 99, 105, 101, 110, 99, 101)
+  Grade: 3
+  Publisher: 'Valleybooks OPC'
+  Title: 'Masayang Agham: Mapagtuklas na Kaisipan'
+  Status: 'For ROR'
+

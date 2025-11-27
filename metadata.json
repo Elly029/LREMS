@@ -1,0 +1,5 @@
+{
+  "name": "Grades 1 and 3 TX and TM records",
+  "description": "A web application to manage and track TX and TM records for grades 1 and 3, including titles, publishers, and statuses, mirroring a spreadsheet interface. It allows for adding, editing, deleting, sorting, and filtering book records.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,228 @@
+
+import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import config from '../config/environment';
+import { protect } from '../middleware/auth';
+
+const router = Router();
+
+// Generate JWT
+const generateToken = (id: string) => {
+    return jwt.sign({ id }, config.jwt.secret || 'secret', {
+        expiresIn: '30d',
+    });
+};
+
+// @route   POST /api/auth/login
+// @desc    Auth user & get token
+// @access  Public
+router.post('/login', async (req: Request, res: Response) => {
+    try {
+        const { username, password } = req.body;
+
+        const user = await User.findOne({ username });
+
+        if (user && (await bcrypt.compare(password, user.password))) {
+            res.json({
+                _id: user._id,
+                username: user.username,
+                name: user.name,
+                access_rules: user.access_rules,
+                is_admin_access: user.is_admin_access,
+                evaluator_id: user.evaluator_id,
+                token: generateToken((user._id as unknown) as string),
+            });
+        } else {
+            res.status(401).json({ message: 'Invalid username or password' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   POST /api/auth/change-password
+// @desc    Change user password
+// @access  Private
+router.post('/change-password', protect, async (req: Request, res: Response) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user?._id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (await bcrypt.compare(currentPassword, user.password)) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(newPassword, salt);
+            await user.save();
+            res.json({ message: 'Password updated successfully' });
+        } else {
+            res.status(400).json({ message: 'Invalid current password' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/auth/me
+// @desc    Get current user profile
+// @access  Private
+router.get('/me', protect, async (req: Request, res: Response) => {
+    try {
+        const user = await User.findById(req.user?._id).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   POST /api/auth/create-evaluator-accounts
+// @desc    Create user accounts for all evaluators (Admin only)
+// @access  Private/Admin
+router.post('/create-evaluator-accounts', protect, async (req: Request, res: Response) => {
+    try {
+        // Check if user is admin
+        const currentUser = await User.findById(req.user?._id);
+        if (!currentUser?.is_admin_access) {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const Evaluator = require('../models/Evaluator').default;
+        const evaluators = await Evaluator.find();
+
+        const defaultPassword = 'BLRLRE';
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(defaultPassword, salt);
+
+        const createdAccounts = [];
+        const skippedAccounts = [];
+        const errors = [];
+
+        for (const evaluator of evaluators) {
+            try {
+                // Create username from DepEd email (before @)
+                const username = evaluator.depedEmail.split('@')[0].toLowerCase();
+
+                // Check if account already exists
+                const existingUser = await User.findOne({ username });
+                if (existingUser) {
+                    skippedAccounts.push({
+                        evaluator: evaluator.name,
+                        username,
+                        reason: 'Account already exists'
+                    });
+                    continue;
+                }
+
+                // Create user account
+                const newUser = new User({
+                    username,
+                    password: hashedPassword,
+                    name: evaluator.name,
+                    access_rules: [],
+                    is_admin_access: false,
+                    evaluator_id: evaluator._id.toString(),
+                });
+
+                await newUser.save();
+
+                // Update evaluator with username
+                evaluator.username = username;
+                await evaluator.save();
+
+                createdAccounts.push({
+                    evaluator: evaluator.name,
+                    username,
+                    defaultPassword: 'BLRLRE'
+                });
+            } catch (error: any) {
+                errors.push({
+                    evaluator: evaluator.name,
+                    error: error.message
+                });
+            }
+        }
+
+        res.json({
+            message: 'Evaluator account creation completed',
+            created: createdAccounts.length,
+            skipped: skippedAccounts.length,
+            errorCount: errors.length,
+            createdAccounts,
+            skippedAccounts,
+            errors
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Debug endpoint to check/reset/create user (Remove in production)
+router.post('/debug-user', async (req: Request, res: Response) => {
+    try {
+        const { username } = req.body;
+        let user = await User.findOne({ username });
+
+        const Evaluator = require('../models/Evaluator').default;
+        const evaluator = await Evaluator.findOne({ username });
+
+        if (!evaluator) {
+            return res.status(404).json({ message: 'Evaluator not found with this username' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('BLRLRE', salt);
+
+        if (!user) {
+            // Create missing user
+            user = new User({
+                username,
+                password: hashedPassword,
+                name: evaluator.name,
+                access_rules: [],
+                is_admin_access: false,
+                evaluator_id: evaluator._id.toString(),
+            });
+            await user.save();
+
+            return res.json({
+                message: 'User account created and linked to evaluator',
+                user: {
+                    username: user.username,
+                    name: user.name,
+                    evaluator_id: user.evaluator_id
+                }
+            });
+        }
+
+        // Reset password if user exists
+        user.password = hashedPassword;
+        user.evaluator_id = evaluator._id.toString(); // Ensure link exists
+        await user.save();
+
+        res.json({
+            message: 'User found and password reset to BLRLRE',
+            user: {
+                username: user.username,
+                name: user.name,
+                evaluator_id: user.evaluator_id,
+                is_admin_access: user.is_admin_access
+            }
+        });
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).json({ message: 'Error', error: error.message });
+    }
+});
+
+export default router;
