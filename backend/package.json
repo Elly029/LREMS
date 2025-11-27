@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon -r tsconfig-paths/register src/server.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -47,6 +47,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "tsc-alias": "^1.8.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
