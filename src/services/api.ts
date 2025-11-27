@@ -102,11 +102,9 @@ export class ApiClient {
         }
 
         const queryString = searchParams.toString();
-        const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
-        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        const url = queryString ? `${cleanBaseURL}${cleanEndpoint}?${queryString}` : `${cleanBaseURL}${cleanEndpoint}`;
+        const endpointWithQuery = queryString ? `${endpoint}?${queryString}` : endpoint;
 
-        return this.request<T>(url, { method: 'GET' });
+        return this.request<T>(endpointWithQuery, { method: 'GET' });
     }
 
     async post<T>(endpoint: string, data?: any): Promise<T> {
