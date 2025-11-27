@@ -37,10 +37,10 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     console.log('CORS check for origin:', origin);
     console.log('Allowed origins:', allowedOrigins);
-    
+
     // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
       console.log('Origin allowed');
@@ -66,10 +66,10 @@ app.use(cors({
 // Handle preflight requests explicitly
 app.options('*', (req, res) => {
   const origin = req.get('Origin');
-  
+
   console.log('Preflight request received from origin:', origin);
   console.log('Allowed origins:', allowedOrigins);
-  
+
   // Set CORS headers for preflight requests
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -79,19 +79,21 @@ app.options('*', (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     console.log('Setting CORS header for no origin');
   } else {
-    console.log('Origin not allowed, but continuing with request');
-    // Even if origin is not in our list, we still need to respond to the preflight
-    // The actual request will be blocked by the CORS middleware
-    if (origin) {
+    console.log('Origin not allowed:', origin);
+    // In development, be more permissive
+    if (config.nodeEnv === 'development') {
       res.header('Access-Control-Allow-Origin', origin);
+      console.log('Allowing origin in development mode:', origin);
+    } else {
+      res.header('Access-Control-Allow-Origin', 'null');
     }
   }
-  
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
+
   console.log('Sending preflight response with headers:', res.getHeaders());
   res.sendStatus(200);
 });
