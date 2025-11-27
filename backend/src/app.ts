@@ -37,12 +37,24 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-
+    
+    console.log('CORS check for origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
+    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
+      console.log('Origin allowed');
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      // For development, you might want to be more permissive
+      // But in production, be strict
+      if (config.nodeEnv === 'development') {
+        console.warn(`CORS allowed in development for origin: ${origin}`);
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   credentials: true,
@@ -52,7 +64,37 @@ app.use(cors({
 }));
 
 // Handle preflight requests explicitly
-app.options('*', cors());
+app.options('*', (req, res) => {
+  const origin = req.get('Origin');
+  
+  console.log('Preflight request received from origin:', origin);
+  console.log('Allowed origins:', allowedOrigins);
+  
+  // Set CORS headers for preflight requests
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    console.log('Setting CORS header for allowed origin:', origin);
+  } else if (!origin) {
+    // For requests with no origin, allow all
+    res.header('Access-Control-Allow-Origin', '*');
+    console.log('Setting CORS header for no origin');
+  } else {
+    console.log('Origin not allowed, but continuing with request');
+    // Even if origin is not in our list, we still need to respond to the preflight
+    // The actual request will be blocked by the CORS middleware
+    if (origin) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  console.log('Sending preflight response with headers:', res.getHeaders());
+  res.sendStatus(200);
+});
 
 // Security middleware
 app.use(helmet({
