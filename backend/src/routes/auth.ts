@@ -183,6 +183,46 @@ router.post('/create-evaluator-accounts', protect, async (req: Request, res: Res
     }
 });
 
+// Seed initial admin users (Remove after first use in production)
+router.post('/seed-users', async (req: Request, res: Response) => {
+    try {
+        const { secretKey } = req.body;
+
+        // Simple protection - require a secret key
+        if (secretKey !== 'SEED_LREMS_2025') {
+            return res.status(403).json({ message: 'Invalid secret key' });
+        }
+
+        const users = [
+            { username: 'admin-l', name: 'ADMIN-L', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
+            { username: 'admin-c', name: 'ADMIN-C', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
+            { username: 'leo', name: 'Leo', is_admin_access: true, access_rules: [{ learning_areas: ['Science'], grade_levels: [] }] },
+            { username: 'celso', name: 'Celso', is_admin_access: true, access_rules: [{ learning_areas: ['Mathematics', 'EPP', 'TLE'], grade_levels: [] }] },
+            { username: 'nonie', name: 'Nonie', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
+            { username: 'jc', name: 'JC', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
+        ];
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('BLRFACI123', salt);
+
+        const results = [];
+        for (const userData of users) {
+            const existing = await User.findOne({ username: userData.username });
+            if (existing) {
+                results.push({ username: userData.username, status: 'exists' });
+            } else {
+                await User.create({ ...userData, password: hashedPassword });
+                results.push({ username: userData.username, status: 'created' });
+            }
+        }
+
+        res.json({ message: 'Seed completed', results, defaultPassword: 'BLRFACI123' });
+    } catch (error: any) {
+        console.error('Seed error:', error);
+        res.status(500).json({ message: 'Seed failed', error: error.message });
+    }
+});
+
 // Debug endpoint to check/reset/create user (Remove in production)
 router.post('/debug-user', async (req: Request, res: Response) => {
     try {
