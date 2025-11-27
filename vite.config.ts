@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: '0.0.0.0',
     },
+    preview: {
+      allowedHosts: ['lrems.up.railway.app'],
+    },
     plugins: [react()],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
