@@ -31,7 +31,7 @@ export class ApiClient {
     }
 
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const url = `${this.baseURL}${endpoint}`;
+        const url = `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -96,7 +96,7 @@ export class ApiClient {
         }
 
         const queryString = searchParams.toString();
-        const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+        const url = queryString ? `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}?${queryString}` : `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
         return this.request<T>(url, { method: 'GET' });
     }

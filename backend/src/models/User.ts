@@ -8,6 +8,7 @@ export interface IAccessRule {
 
 export interface IUser extends Document {
     username: string;
+    email?: string; // Optional email field to resolve database index issue
     password: string; // Hashed
     name: string;
     access_rules: IAccessRule[];
@@ -29,6 +30,13 @@ const UserSchema: Schema = new Schema(
             required: true,
             unique: true,
             trim: true,
+        },
+        email: {
+            type: String,
+            unique: true,
+            sparse: true, // Allow null values but enforce uniqueness when present
+            trim: true,
+            lowercase: true,
         },
         password: {
             type: String,
