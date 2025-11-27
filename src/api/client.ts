@@ -124,7 +124,9 @@ class ApiClient {
     }
 
     const queryString = searchParams.toString();
-    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = queryString ? `${cleanBaseURL}${cleanEndpoint}?${queryString}` : `${cleanBaseURL}${cleanEndpoint}`;
 
     return this.request<T>(url, { method: 'GET' });
   }
