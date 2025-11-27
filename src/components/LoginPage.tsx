@@ -231,11 +231,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           mix-blend-mode: screen;
         }
         .stars {
-          background:transparent url(http://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
+          background:transparent url(https://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
           z-index:0;
         }
         .twinkling{
-          background:transparent url(http://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
+          background:transparent url(https://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
           z-index:1;
           animation:move-twink-back 50s linear infinite;
         }
