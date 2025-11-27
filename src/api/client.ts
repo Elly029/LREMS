@@ -1,5 +1,5 @@
 // API Client Configuration
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 // Request timeout in milliseconds
 const REQUEST_TIMEOUT = 10000;
@@ -58,11 +58,11 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-    
+
     const config: RequestInit = {
       signal: controller.signal,
       headers: {
@@ -105,7 +105,7 @@ class ApiClient {
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const searchParams = new URLSearchParams();
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -120,7 +120,7 @@ class ApiClient {
 
     const queryString = searchParams.toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-    
+
     return this.request<T>(url, { method: 'GET' });
   }
 
