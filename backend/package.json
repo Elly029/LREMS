@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
     "seed": "ts-node src/database/seed.ts",
+    "seed:users": "ts-node -r tsconfig-paths/register src/scripts/seed_users.ts",
     "extract-excel": "ts-node scripts/extract-excel-data.js",
     "upload-evaluators": "ts-node -r tsconfig-paths/register src/scripts/uploadEvaluators.ts",
     "migrate:ntp-date": "ts-node -r tsconfig-paths/register src/scripts/add_ntp_date_field.ts",
