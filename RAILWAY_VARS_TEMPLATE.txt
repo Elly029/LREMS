@@ -1,0 +1,35 @@
+# ============================================
+# RAILWAY BACKEND - COPY & PASTE TEMPLATE
+# ============================================
+# Copy these lines to Railway Backend's Variables tab
+# Replace placeholders with your actual values
+
+NODE_ENV=production
+DATABASE_URL=mongodb+srv://YOUR_USER:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/lrems?retryWrites=true&w=majority
+JWT_SECRET=PASTE_FROM_GENERATE_SECRETS_SCRIPT
+JWT_REFRESH_SECRET=PASTE_FROM_GENERATE_SECRETS_SCRIPT
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+BCRYPT_ROUNDS=12
+CORS_ORIGIN=https://lrems.up.railway.app
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+LOG_LEVEL=info
+
+# ============================================
+# RAILWAY FRONTEND - COPY & PASTE TEMPLATE
+# ============================================
+# Copy this line to Railway Frontend's Variables tab
+# Replace YOUR_BACKEND_URL with your actual backend URL
+
+VITE_API_BASE_URL=https://YOUR_BACKEND_URL.up.railway.app/api
+
+# ============================================
+# INSTRUCTIONS
+# ============================================
+# 1. Run: node generate-secrets.js
+# 2. Get MongoDB connection string from Atlas
+# 3. Find your Railway backend URL
+# 4. Replace all placeholders above
+# 5. Copy-paste to Railway dashboard
+# ============================================

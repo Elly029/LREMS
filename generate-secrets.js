@@ -1,5 +1,5 @@
 // Generate secure JWT secrets for Railway deployment
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 console.log('\n🔐 RAILWAY DEPLOYMENT - JWT SECRETS GENERATOR\n');
 console.log('Copy these values to your Railway environment variables:\n');
