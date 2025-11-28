@@ -70,7 +70,29 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     return dateA - dateB; // Ascending order (oldest first)
   });
 
+  // Helper function to check if a remark has complete data for export
+  const isRemarkComplete = (remark: Remark): boolean => {
+    // A remark is considered incomplete if it has:
+    // - No fromDate AND no toDate (both empty)
+    // - No from entity selected (empty or "Select...")
+    // - No to entity selected (empty or "Select...")
+    // - Both delays are 0 or undefined
+    const hasDateRange = remark.fromDate || remark.toDate;
+    const hasFromEntity = remark.from && remark.from !== 'Select...';
+    const hasToEntity = remark.to && remark.to !== 'Select...';
+    const hasDelays = (remark.daysDelayDeped && remark.daysDelayDeped > 0) || 
+                      (remark.daysDelayPublisher && remark.daysDelayPublisher > 0);
+    const hasStatus = remark.status && remark.status.trim() !== '';
+    
+    // Remark is complete if it has at least date range AND from/to entities
+    // OR if it has meaningful delay data
+    return (hasDateRange && hasFromEntity && hasToEntity) || hasDelays || hasStatus;
+  };
+
   const handleExportPDF = () => {
+    // Filter out incomplete remarks for export
+    const remarksToExport = sortedRemarks.filter(isRemarkComplete);
+    
     const doc = new jspdf.jsPDF();
 
     // Add Logo on the left
@@ -93,7 +115,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     doc.text(`NTP Date: ${ntpDateStr}`, 14, 71);
 
     // Prepare table data
-    const data = sortedRemarks.map(remark => {
+    const data = remarksToExport.map(remark => {
       const timelineDate = formatDateRange(remark.fromDate, remark.toDate);
       const from = remark.from || '-';
       const to = remark.to || '-';
@@ -104,9 +126,9 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       return [timelineDate, from, to, remarks, depEdDelay.toString(), publisherDelay.toString()];
     });
 
-    // Calculate totals
-    const totalDepEd = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayDeped || 0), 0);
-    const totalPublisher = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayPublisher || 0), 0);
+    // Calculate totals from filtered remarks
+    const totalDepEd = remarksToExport.reduce((sum, r) => sum + (r.daysDelayDeped || 0), 0);
+    const totalPublisher = remarksToExport.reduce((sum, r) => sum + (r.daysDelayPublisher || 0), 0);
     const totalDays = totalDepEd + totalPublisher;
 
     // Add table to PDF with custom header structure and page break handling
@@ -258,8 +280,11 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
   };
 
   const handleExportExcel = () => {
+    // Filter out incomplete remarks for export
+    const remarksToExport = sortedRemarks.filter(isRemarkComplete);
+    
     // Prepare data for export with the specified header format
-    const exportData = sortedRemarks.map(remark => ({
+    const exportData = remarksToExport.map(remark => ({
       'Timeline/Date': formatDateRange(remark.fromDate, remark.toDate),
       'From': remark.from || '-',
       'To': remark.to || '-',
@@ -268,9 +293,9 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       'Due to Publisher': remark.daysDelayPublisher || 0
     }));
 
-    // Calculate totals
-    const totalDepEd = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayDeped || 0), 0);
-    const totalPublisher = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayPublisher || 0), 0);
+    // Calculate totals from filtered remarks
+    const totalDepEd = remarksToExport.reduce((sum, r) => sum + (r.daysDelayDeped || 0), 0);
+    const totalPublisher = remarksToExport.reduce((sum, r) => sum + (r.daysDelayPublisher || 0), 0);
 
     // Add totals row
     exportData.push({
