@@ -442,8 +442,10 @@ router.put('/group/:conversationId/participants', protect, async (req: Request, 
 
         // Get new participant details
         const newParticipants = await User.find({
-            _id: { $in: participant_ids },
-            _id: { $nin: conversation.participants }
+            $and: [
+                { _id: { $in: participant_ids } },
+                { _id: { $nin: conversation.participants } }
+            ]
         }).select('_id name');
 
         if (newParticipants.length === 0) {
