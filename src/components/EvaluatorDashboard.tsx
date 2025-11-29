@@ -106,6 +106,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
                 evaluator={selectedEvaluator}
                 onBack={() => setSelectedEvaluator(null)}
                 onRefresh={fetchData}
+                showBackButton={user?.is_admin_access}
             />
         );
     }

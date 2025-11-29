@@ -7,6 +7,7 @@ interface EvaluatorDetailViewProps {
     evaluator: EvaluatorProfile;
     onBack: () => void;
     onRefresh?: () => void;
+    showBackButton?: boolean;
 }
 
 type GroupBy = 'event' | 'area';
@@ -35,7 +36,7 @@ const StatusDropdown = ({ value, onChange }: { value: string, onChange: (val: st
     );
 };
 
-export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evaluator, onBack, onRefresh }) => {
+export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evaluator, onBack, onRefresh, showBackButton = true }) => {
     const [assignments, setAssignments] = useState<EvaluatorAssignment[]>([]);
     const [stats, setStats] = useState<EvaluatorStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -131,15 +132,17 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     return (
         <div className="space-y-6">
             {/* Back Button */}
-            <button
-                onClick={onBack}
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Dashboard
-            </button>
+            {showBackButton && (
+                <button
+                    onClick={onBack}
+                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Dashboard
+                </button>
+            )}
 
             {/* Evaluator Profile Card */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
