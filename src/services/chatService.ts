@@ -91,4 +91,19 @@ export const chatService = {
     async markAsRead(conversationId: string): Promise<void> {
         await apiClient.put(`/chat/conversations/${conversationId}/read`, {});
     },
+
+    // Create a group chat
+    async createGroup(title: string, participantIds: string[]): Promise<{ message: string; conversation_id: string; participants_count: number; conversation: Conversation }> {
+        return apiClient.post('/chat/group', {
+            title,
+            participant_ids: participantIds,
+        });
+    },
+
+    // Add participants to a group
+    async addGroupParticipants(conversationId: string, participantIds: string[]): Promise<{ message: string; conversation: Conversation }> {
+        return apiClient.put(`/chat/group/${conversationId}/participants`, {
+            participant_ids: participantIds,
+        });
+    },
 };

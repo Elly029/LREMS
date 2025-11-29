@@ -344,4 +344,139 @@ router.put('/conversations/:conversationId/read', protect, async (req: Request, 
     }
 });
 
+// @route   POST /api/chat/group
+// @desc    Create a group chat
+// @access  Private
+router.post('/group', protect, async (req: Request, res: Response) => {
+    try {
+        const sender = req.user;
+
+        if (!sender) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { title, participant_ids } = req.body;
+
+        if (!title || title.trim().length === 0) {
+            return res.status(400).json({ message: 'Group name is required' });
+        }
+
+        if (!participant_ids || participant_ids.length === 0) {
+            return res.status(400).json({ message: 'At least one participant is required' });
+        }
+
+        // Get participant details
+        const participants = await User.find({ _id: { $in: participant_ids } }).select('_id name');
+
+        if (participants.length === 0) {
+            return res.status(400).json({ message: 'No valid participants found' });
+        }
+
+        const conversationId = `group_${uuidv4()}`;
+        const participantIds = [sender._id, ...participants.map(u => u._id)];
+        const participantNames = [sender.name, ...participants.map(u => u.name)];
+
+        // Create group conversation
+        const conversation = new Conversation({
+            conversation_id: conversationId,
+            participants: participantIds,
+            participant_names: participantNames,
+            conversation_type: 'group',
+            title: title.trim(),
+            created_by: sender._id,
+            last_message: null,
+            last_message_at: new Date(),
+        });
+        await conversation.save();
+
+        // Create initial system message
+        const message = new Message({
+            sender_id: sender._id,
+            sender_name: sender.name,
+            sender_role: getUserRole(sender),
+            conversation_id: conversationId,
+            message_type: 'group',
+            content: `${sender.name} created the group "${title.trim()}"`,
+            read_by: [sender._id],
+        });
+        await message.save();
+
+        // Update conversation with last message
+        conversation.last_message = message.content.substring(0, 100);
+        await conversation.save();
+
+        res.status(201).json({
+            message: 'Group created successfully',
+            conversation_id: conversationId,
+            participants_count: participantIds.length,
+            conversation
+        });
+    } catch (error) {
+        console.error('Error creating group:', error);
+        res.status(500).json({ message: 'Failed to create group' });
+    }
+});
+
+// @route   PUT /api/chat/group/:conversationId/participants
+// @desc    Add participants to a group
+// @access  Private
+router.put('/group/:conversationId/participants', protect, async (req: Request, res: Response) => {
+    try {
+        const { conversationId } = req.params;
+        const { participant_ids } = req.body;
+        const sender = req.user;
+
+        if (!sender) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const conversation = await Conversation.findOne({
+            conversation_id: conversationId,
+            conversation_type: 'group',
+            participants: sender._id
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Get new participant details
+        const newParticipants = await User.find({
+            _id: { $in: participant_ids },
+            _id: { $nin: conversation.participants }
+        }).select('_id name');
+
+        if (newParticipants.length === 0) {
+            return res.status(400).json({ message: 'No new participants to add' });
+        }
+
+        // Add new participants
+        conversation.participants.push(...newParticipants.map(u => u._id));
+        conversation.participant_names.push(...newParticipants.map(u => u.name));
+        await conversation.save();
+
+        // Create system message
+        const addedNames = newParticipants.map(u => u.name).join(', ');
+        const message = new Message({
+            sender_id: sender._id,
+            sender_name: sender.name,
+            sender_role: getUserRole(sender),
+            conversation_id: conversationId,
+            message_type: 'group',
+            content: `${sender.name} added ${addedNames} to the group`,
+            read_by: [sender._id],
+        });
+        await message.save();
+
+        conversation.last_message = message.content.substring(0, 100);
+        conversation.last_message_at = new Date();
+        await conversation.save();
+
+        res.json({ message: 'Participants added successfully', conversation });
+    } catch (error) {
+        console.error('Error adding participants:', error);
+        res.status(500).json({ message: 'Failed to add participants' });
+    }
+});
+
 export default router;
