@@ -6,6 +6,8 @@ import { BookFormModal } from './components/BookFormModal';
 import { AddRemarkModal } from './components/AddRemarkModal';
 import { PlusIcon, SearchIcon } from './components/Icons';
 import { useDebounce } from './hooks/useDebounce';
+import { useRateLimitedFetch } from './hooks/useRateLimitedFetch';
+import { useRequestThrottle } from './hooks/useRequestThrottle';
 import { Toast } from './components/Toast';
 import { RemarkHistoryModal } from './components/RemarkHistoryModal';
 import { bookApi } from './services/bookService';
@@ -139,9 +141,9 @@ const App: React.FC = () => {
       return '';
     }
   });
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [isFiltering, setIsFiltering] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 1000); // Increased from 300ms to 1000ms
 
+  const [isFiltering, setIsFiltering] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [deletingBookCode, setDeletingBookCode] = useState<string | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
@@ -153,7 +155,6 @@ const App: React.FC = () => {
     }, 3000);
   };
 
-  // API integration with real backend
   const fetchBooks = async () => {
     if (!user) return;
 
@@ -163,7 +164,7 @@ const App: React.FC = () => {
       const result = await bookApi.fetchBooks({
         search: debouncedSearchTerm || undefined,
         page: 1,
-        limit: 100, // Adjust as needed
+        limit: 500, // Increased limit to reduce pagination requests
         sortBy: sortConfig.key,
         sortOrder: sortConfig.direction === 'ascending' ? 'asc' : 'desc',
       });
@@ -172,96 +173,6 @@ const App: React.FC = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch books';
       setError(errorMessage);
-      console.error('Error fetching books:', err);
-      setBooks([]); // Clear books on error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Persist filters, sort, and search to sessionStorage
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('bookFilters', JSON.stringify(filters));
-    } catch (error) {
-      console.error('Failed to save filters', error);
-    }
-  }, [filters]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('bookSort', JSON.stringify(sortConfig));
-    } catch (error) {
-      console.error('Failed to save sort config', error);
-    }
-  }, [sortConfig]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('bookSearch', searchTerm);
-    } catch (error) {
-      console.error('Failed to save search term', error);
-    }
-  }, [searchTerm]);
-
-  // Initialize data and handle search
-  useEffect(() => {
-    if (user) {
-      fetchBooks();
-    }
-  }, [user, debouncedSearchTerm, sortConfig.key, sortConfig.direction]);
-
-  const createBook = async (bookData: Omit<Book, 'remarks' | 'bookCode'> & { bookCode?: string }) => {
-    try {
-      const newBook = await bookApi.createBook({
-        bookCode: bookData.bookCode,
-        learningArea: bookData.learningArea,
-        gradeLevel: bookData.gradeLevel,
-        publisher: bookData.publisher,
-        title: bookData.title,
-        status: bookData.status,
-        isNew: bookData.isNew,
-        ntpDate: bookData.ntpDate,
-      });
-
-      setBooks(prev => [newBook, ...prev]);
-      return newBook;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create book';
-      setError(errorMessage);
-      throw err;
-    }
-  };
-
-  const updateBook = async (bookCode: string, bookData: Partial<Book>) => {
-    try {
-      const updatedBook = await bookApi.updateBook(bookCode, {
-        bookCode: bookData.bookCode,
-        learningArea: bookData.learningArea,
-        gradeLevel: bookData.gradeLevel,
-        publisher: bookData.publisher,
-        title: bookData.title,
-        status: bookData.status,
-        isNew: bookData.isNew,
-        ntpDate: bookData.ntpDate,
-      });
-
-      setBooks(prev => prev.map(book =>
-        book.bookCode === bookCode ? updatedBook : book
-      ));
-
-      return updatedBook;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update book';
-      setError(errorMessage);
-      throw err;
-    }
-  };
-
-  const deleteBook = async (bookCode: string) => {
-    try {
-      await bookApi.deleteBook(bookCode);
-      setBooks(prev => prev.filter(book => book.bookCode !== bookCode));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete book';
       setError(errorMessage);
@@ -993,7 +904,7 @@ const App: React.FC = () => {
         type={toast?.type}
         onClose={() => setToast(null)}
       />
-      
+
       {/* Chat Feature */}
       <ChatButton onClick={() => setIsChatOpen(true)} />
       <ChatPanel
