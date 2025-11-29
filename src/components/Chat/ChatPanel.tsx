@@ -322,7 +322,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                 <div className="flex-1 flex flex-col bg-white">
                     {/* New Chat / New Group / Broadcast / Messages View */}
                     {viewMode === 'new-chat' && (
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col min-h-0">
                             <div className="p-4 border-b border-gray-200">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-lg font-semibold text-gray-800">New Chat</h3>
@@ -341,7 +341,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                                     />
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4">
+                            <div className="flex-1 overflow-y-auto p-4 min-h-0">
                                 {users.map((user) => (
                                     <button
                                         key={user._id}
@@ -365,7 +365,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                     )}
 
                     {viewMode === 'new-group' && (
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col min-h-0">
                             <div className="p-4 border-b border-gray-200">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-lg font-semibold text-gray-800">New Group</h3>
@@ -391,7 +391,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                                     />
                                 </div>
                                 {selectedUsers.length > 0 && (
-                                    <div className="mt-3 flex flex-wrap gap-2">
+                                    <div className="mt-3 flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                                         {selectedUsers.map(user => (
                                             <span key={user._id} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
                                                 {user.name}
@@ -406,7 +406,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4">
+                            <div className="flex-1 overflow-y-auto p-4 min-h-0">
                                 {users.map((user) => (
                                     <button
                                         key={user._id}
