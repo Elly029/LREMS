@@ -331,6 +331,50 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     XLSX.writeFile(wb, `quality-assurance-${book.bookCode}.xlsx`);
   };
 
+  const handleExportAllRemarks = () => {
+    // Export ALL remarks (including incomplete ones) as a log
+    const exportData = sortedRemarks.map((remark, index) => ({
+      'Entry #': index + 1,
+      'Timestamp': formatTimestamp(remark.timestamp),
+      'Created By': remark.createdBy || '-',
+      'Timeline/Date': formatDateRange(remark.fromDate, remark.toDate),
+      'From': remark.from || '-',
+      'To': remark.to || '-',
+      'Status': remark.status || '-',
+      'Remarks/Notes': remark.text || '-',
+      'Days Delay - DepEd': remark.daysDelayDeped || 0,
+      'Days Delay - Publisher': remark.daysDelayPublisher || 0
+    }));
+
+    // Calculate totals
+    const totalDepEd = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayDeped || 0), 0);
+    const totalPublisher = sortedRemarks.reduce((sum, r) => sum + (r.daysDelayPublisher || 0), 0);
+
+    // Add totals row
+    exportData.push({
+      'Entry #': '' as any,
+      'Timestamp': '',
+      'Created By': '',
+      'Timeline/Date': '',
+      'From': '',
+      'To': '',
+      'Status': '',
+      'Remarks/Notes': 'TOTAL',
+      'Days Delay - DepEd': totalDepEd,
+      'Days Delay - Publisher': totalPublisher
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'All Remarks Log');
+
+    // Export to file
+    XLSX.writeFile(wb, `all-remarks-log-${book.bookCode}.xlsx`);
+  };
+
   const handleEditRemark = (remark: Remark, index: number) => {
     // Use the remark's id if it exists, otherwise fall back to index
     setEditingRemark(remark);
@@ -547,6 +591,16 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export Excel
+              </button>
+              <button
+                onClick={handleExportAllRemarks}
+                className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold py-2 px-4 rounded-lg transition-colors border border-purple-200"
+                title="Export all remarks including incomplete entries"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export All Log
               </button>
             </div>
             <button
