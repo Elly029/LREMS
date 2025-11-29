@@ -72,21 +72,16 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
 
   // Helper function to check if a remark has complete data for export
   const isRemarkComplete = (remark: Remark): boolean => {
-    // A remark is considered incomplete if it has:
-    // - No fromDate AND no toDate (both empty)
-    // - No from entity selected (empty or "Select...")
-    // - No to entity selected (empty or "Select...")
-    // - Both delays are 0 or undefined
+    // A remark must have ALL of these to be included in export:
+    // - Date range (fromDate or toDate)
+    // - From entity selected
+    // - To entity selected
     const hasDateRange = remark.fromDate || remark.toDate;
-    const hasFromEntity = remark.from && remark.from !== 'Select...';
-    const hasToEntity = remark.to && remark.to !== 'Select...';
-    const hasDelays = (remark.daysDelayDeped && remark.daysDelayDeped > 0) || 
-                      (remark.daysDelayPublisher && remark.daysDelayPublisher > 0);
-    const hasStatus = remark.status && remark.status.trim() !== '';
+    const hasFromEntity = remark.from && remark.from !== 'Select...' && remark.from !== '';
+    const hasToEntity = remark.to && remark.to !== 'Select...' && remark.to !== '';
     
-    // Remark is complete if it has at least date range AND from/to entities
-    // OR if it has meaningful delay data
-    return (hasDateRange && hasFromEntity && hasToEntity) || hasDelays || hasStatus;
+    // Remark is complete only if it has date range AND both from/to entities
+    return hasDateRange && hasFromEntity && hasToEntity;
   };
 
   const handleExportPDF = () => {
