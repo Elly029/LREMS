@@ -92,19 +92,6 @@ The backend (`backend/src/routes/chat.ts`) already had full support for:
 ### Backend Routes (`/api/chat/...`):
 - `GET /conversations`: List user's conversations
 - `GET /conversations/:id/messages`: Get conversation messages
-- `POST /messages`: Send a message
-- `POST /broadcast`: Send broadcast (admin only)
-- `POST /group`: Create group chat
-- `PUT /group/:id/participants`: Add members to group
-- `GET /users`: Search users for chat
-- `GET /unread-count`: Get unread message count
-- `PUT /conversations/:id/read`: Mark as read
-
-## Database Models
-
-### Message:
-- sender_id, sender_name, sender_role
-- recipient_id (for direct messages)
 - conversation_id
 - message_type: 'direct' | 'broadcast' | 'group'
 - content

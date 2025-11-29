@@ -183,6 +183,59 @@ router.post('/create-evaluator-accounts', protect, async (req: Request, res: Res
     }
 });
 
+// @route   POST /api/auth/link-evaluators
+// @desc    Link existing user accounts to evaluator profiles (Admin only)
+// @access  Private/Admin
+router.post('/link-evaluators', protect, async (req: Request, res: Response) => {
+    try {
+        // Check if user is admin
+        const currentUser = await User.findById(req.user?._id);
+        if (!currentUser?.is_admin_access) {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const Evaluator = require('../models/Evaluator').default;
+        const evaluators = await Evaluator.find();
+
+        let updatedCount = 0;
+        let notFoundCount = 0;
+        let alreadyLinkedCount = 0;
+        const updates = [];
+
+        for (const evaluator of evaluators) {
+            // Determine username from email if not set
+            const username = evaluator.username || evaluator.depedEmail.split('@')[0].toLowerCase();
+
+            const user = await User.findOne({ username: username });
+
+            if (user) {
+                if (user.evaluator_id === evaluator._id.toString()) {
+                    alreadyLinkedCount++;
+                } else {
+                    user.evaluator_id = evaluator._id.toString();
+                    await user.save();
+                    updatedCount++;
+                    updates.push({ username, evaluatorId: evaluator._id });
+                }
+            } else {
+                notFoundCount++;
+            }
+        }
+
+        res.json({
+            message: 'Evaluator linking completed',
+            totalEvaluators: evaluators.length,
+            updated: updatedCount,
+            alreadyLinked: alreadyLinkedCount,
+            userNotFound: notFoundCount,
+            updates
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Fix email index issue (one-time use)
 router.post('/fix-email-index', async (req: Request, res: Response) => {
     try {
