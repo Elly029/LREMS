@@ -6,8 +6,6 @@ import { BookFormModal } from './components/BookFormModal';
 import { AddRemarkModal } from './components/AddRemarkModal';
 import { PlusIcon, SearchIcon } from './components/Icons';
 import { useDebounce } from './hooks/useDebounce';
-import { useRateLimitedFetch } from './hooks/useRateLimitedFetch';
-import { useRequestThrottle } from './hooks/useRequestThrottle';
 import { Toast } from './components/Toast';
 import { RemarkHistoryModal } from './components/RemarkHistoryModal';
 import { bookApi } from './services/bookService';
@@ -50,6 +48,7 @@ const App: React.FC = () => {
   const [isEvaluatorModalOpen, setIsEvaluatorModalOpen] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<EvaluatorProfile | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard'>('inventory');
 
   // Tour handler reference
   const evaluatorTourStartRef = useRef<(() => void) | null>(null);
@@ -150,53 +149,29 @@ const App: React.FC = () => {
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 3000);
   };
 
-  const fetchBooks = async () => {
-    if (!user) return;
-
+  // Fetch books from API
+  const fetchBooks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await bookApi.fetchBooks({
-        search: debouncedSearchTerm || undefined,
-        page: 1,
-        limit: 500, // Increased limit to reduce pagination requests
-        sortBy: sortConfig.key,
-        sortOrder: sortConfig.direction === 'ascending' ? 'asc' : 'desc',
-      });
-
+      const result = await bookApi.fetchBooks();
       setBooks(result.books);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch books';
-      setError(errorMessage);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete book';
-      setError(errorMessage);
-      throw err;
+    } catch (err: any) {
+      console.error('Error fetching books:', err);
+      setError(err.message || 'Failed to load books');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const addRemark = async (bookCode: string, remark: Remark) => {
-    try {
-      const newRemark = await bookApi.addRemark(bookCode, remark);
-
-      setBooks(prev => prev.map(book =>
-        book.bookCode === bookCode
-          ? { ...book, remarks: [newRemark, ...book.remarks] }
-          : book
-      ));
-
-      return newRemark;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add remark';
-      setError(errorMessage);
-      throw err;
+  // Fetch books on mount and when dataVersion changes
+  useEffect(() => {
+    if (user && currentView === 'inventory') {
+      fetchBooks();
     }
-  };
+  }, [user, currentView, dataVersion, fetchBooks]);
 
   const handleOpenAddModal = () => {
     setEditingBook(null);
@@ -217,15 +192,15 @@ const App: React.FC = () => {
     try {
       if (editingBook) {
         const { remark, ...bookToUpdate } = bookData;
-        await updateBook(editingBook.bookCode, bookToUpdate);
+        await bookApi.updateBook(editingBook.bookCode, bookToUpdate);
         if (remark) {
-          await addRemark(editingBook.bookCode, { text: remark, timestamp: new Date().toISOString() });
+          await bookApi.addRemark(editingBook.bookCode, { text: remark, timestamp: new Date().toISOString() });
         }
         showToast('Book updated successfully!', 'success');
       } else {
-        const newBook = await createBook(bookData);
+        const newBook = await bookApi.createBook(bookData);
         if (bookData.remark) {
-          await addRemark(newBook.bookCode, { text: bookData.remark, timestamp: new Date().toISOString() });
+          await bookApi.addRemark(newBook.bookCode, { text: bookData.remark, timestamp: new Date().toISOString() });
         }
         showToast('Book added successfully!', 'success');
       }
@@ -240,7 +215,7 @@ const App: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this book?')) {
       setDeletingBookCode(bookCode);
       try {
-        await deleteBook(bookCode);
+        await bookApi.deleteBook(bookCode);
         setDeletingBookCode(null);
         setDataVersion(prev => prev + 1);
         showToast('Book deleted successfully.', 'success');
@@ -253,8 +228,9 @@ const App: React.FC = () => {
 
   const handleUpdateBook = useCallback(async (updatedBook: Book) => {
     try {
-      await updateBook(updatedBook.bookCode, updatedBook);
+      await bookApi.updateBook(updatedBook.bookCode, updatedBook);
       showToast('Book updated successfully!', 'success');
+      setDataVersion(prev => prev + 1);
     } catch (err) {
       showToast('Failed to update book', 'error');
     }
@@ -502,9 +478,6 @@ const App: React.FC = () => {
   const filteredLearningAreasCount = useMemo(() => new Set(filteredBooks.map(b => b.learningArea).filter(Boolean)).size, [filteredBooks]);
 
   const isFiltered = filteredBooksCount < totalBooksCount;
-
-
-  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard'>('inventory');
 
   // Monitoring state
   const [monitoringData, setMonitoringData] = useState<import('./types').EvaluatorMonitoring[]>([]);
@@ -860,7 +833,7 @@ const App: React.FC = () => {
       )}
 
       {/* Modals */}
-      < BookFormModal
+      <BookFormModal
         isOpen={isBookModalOpen}
         onClose={handleCloseBookModal}
         onSave={handleSaveBook}
