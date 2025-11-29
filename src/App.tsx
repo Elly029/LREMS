@@ -24,6 +24,7 @@ import { CreateEvaluatorModal } from './components/CreateEvaluatorModal';
 import { evaluatorService, EvaluatorProfile } from './services/evaluatorService';
 import { EvaluatorDashboard } from './components/EvaluatorDashboard';
 import { AddToMonitoringModal } from './components/AddToMonitoringModal';
+import { ChatPanel, ChatButton } from './components/Chat';
 
 interface AccessRule {
   learning_areas: string[];
@@ -46,6 +47,7 @@ const App: React.FC = () => {
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isEvaluatorModalOpen, setIsEvaluatorModalOpen] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<EvaluatorProfile | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Tour handler reference
   const evaluatorTourStartRef = useRef<(() => void) | null>(null);
@@ -990,6 +992,19 @@ const App: React.FC = () => {
         message={toast?.message}
         type={toast?.type}
         onClose={() => setToast(null)}
+      />
+      
+      {/* Chat Feature */}
+      <ChatButton onClick={() => setIsChatOpen(true)} />
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentUser={{
+          _id: user._id,
+          name: user.name,
+          is_admin_access: user.is_admin_access,
+          evaluator_id: user.evaluator_id,
+        }}
       />
     </Layout >
   );

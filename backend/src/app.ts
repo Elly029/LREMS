@@ -18,6 +18,7 @@ import authRouter from '@/routes/auth';
 import evaluatorsRouter from '@/routes/evaluators';
 import evaluationMonitoringRouter from '@/routes/evaluationMonitoring';
 import evaluatorDashboardRouter from '@/routes/evaluatorDashboard';
+import chatRouter from '@/routes/chat';
 
 // Create Express application
 const app: Application = express();
@@ -155,6 +156,7 @@ app.use('/api/books', booksRouter);
 app.use('/api/evaluators', evaluatorsRouter);
 app.use('/api/monitoring', evaluationMonitoringRouter);
 app.use('/api/evaluator-dashboard', evaluatorDashboardRouter);
+app.use('/api/chat', chatRouter);
 
 // 404 handler
 app.use('*', notFoundHandler);
