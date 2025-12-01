@@ -57,8 +57,12 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryCount: number = 0
   ): Promise<T> {
+    const MAX_RETRIES = 3;
+    const BASE_DELAY = 1000; // 1 second
+
     // Ensure baseURL doesn't have a trailing slash
     const cleanBaseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
     // Ensure endpoint starts with a slash
@@ -85,6 +89,19 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle rate limiting with exponential backoff
+        if (response.status === 429 && retryCount < MAX_RETRIES) {
+          const retryAfter = response.headers.get('Retry-After');
+          const delay = retryAfter
+            ? parseInt(retryAfter) * 1000
+            : BASE_DELAY * Math.pow(2, retryCount);
+
+          console.warn(`Rate limited. Retrying in ${delay}ms... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.request<T>(endpoint, options, retryCount + 1);
+        }
+
         const error = new Error(data?.error?.message || `HTTP ${response.status}`);
         (error as any).code = data?.error?.code;
         (error as any).status = response.status;
