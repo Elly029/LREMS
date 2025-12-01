@@ -99,8 +99,12 @@ async function debugBookQuery() {
                 console.log('   ❌ The books collection appears to be empty!');
 
                 // List all collections
-                const collections = await mongoose.connection.db.listCollections().toArray();
-                console.log('   📂 Available collections:', collections.map(c => c.name));
+                if (mongoose.connection.db) {
+                    const collections = await mongoose.connection.db.listCollections().toArray();
+                    console.log('   📂 Available collections:', collections.map(c => c.name));
+                } else {
+                    console.log('   ⚠️ Could not list collections: database connection not established');
+                }
             }
         } else {
             const books = await BookModel.find(filter).select('book_code title learning_area').limit(5);
