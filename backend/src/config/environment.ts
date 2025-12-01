@@ -21,6 +21,12 @@ export const config = {
     poolMax: parseInt(process.env.DB_POOL_MAX || '10'),
   },
 
+  // Cache Configuration
+  cache: {
+    redisUrl: process.env.REDIS_URL,
+    defaultTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '120'),
+  },
+
   // JWT Configuration
   jwt: {
     secret: process.env.JWT_SECRET || 'your-super-secure-jwt-secret-key-change-in-production',

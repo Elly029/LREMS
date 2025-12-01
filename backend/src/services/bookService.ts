@@ -4,6 +4,8 @@ import { Book, CreateBookRequest, UpdateBookRequest, BooksQueryParams } from '@/
 import { NotFoundError, ForbiddenError } from '@/middleware/errorHandler';
 import logger from '@/utils/logger';
 import { IUser } from '@/models/User';
+import cache from '@/utils/cache';
+import config from '@/config/environment';
 
 export class BookService {
   // Map camelCase to snake_case for database fields
@@ -54,6 +56,12 @@ export class BookService {
   // Get all books with filtering, search, and pagination
   async getBooks(queryParams: BooksQueryParams, user?: IUser) {
     try {
+      if (config.features.enableCache) {
+        const cached = cache.get('books:list', { q: queryParams, u: user?.username });
+        if (cached) {
+          return cached;
+        }
+      }
       const {
         page = 1,
         limit = 10,
@@ -70,6 +78,7 @@ export class BookService {
 
       const mappedSortBy = this.mapSortField(sortBy);
       const skip = (page - 1) * limit;
+      const cursor = (queryParams as any).cursor as string | undefined;
 
       // Build filter query
       const filter: any = {};
@@ -150,31 +159,58 @@ export class BookService {
       sort[mappedSortBy] = sortOrder === 'asc' ? 1 : -1;
 
       // Get books with aggregation to include remarks
-      const booksAggregation = await BookModel.aggregate([
-        { $match: filter },
-        {
-          $lookup: {
-            from: 'remarks',
+      const pipeline: any[] = [];
+
+      // Cursor-based pagination (optional)
+      if (cursor) {
+        const mongoose = (await import('mongoose')).default;
+        const objectId = new mongoose.Types.ObjectId(cursor);
+        const cursorMatch = sortOrder === 'asc' ? { _id: { $gt: objectId } } : { _id: { $lt: objectId } };
+        pipeline.push({ $match: cursorMatch });
+      }
+
+      pipeline.push({ $match: filter });
+      {
+        $lookup: {
+          from: 'remarks',
             let: { bookCode: '$book_code' },
             pipeline: [
               { $match: { $expr: { $eq: ['$book_code', '$$bookCode'] } } },
               { $sort: { timestamp: -1 } }
             ],
             as: 'remarks',
-          },
         },
-        {
-          $addFields: {
-            remarks_count: { $size: '$remarks' },
-          },
+      },
+      {
+        $addFields: {
+          remarks_count: { $size: 'remarks' },
         },
-        ...(hasRemarks !== undefined
-          ? [{ $match: { remarks_count: hasRemarks ? { $gt: 0 } : 0 } }]
-          : []),
-        { $sort: sort },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
+      },
+      ...(hasRemarks !== undefined
+        ? [{ $match: { remarks_count: hasRemarks ? { $gt: 0 } : 0 } }]
+        : []),
+      { $project: {
+          _id: 1,
+          book_code: 1,
+          learning_area: 1,
+          grade_level: 1,
+          publisher: 1,
+          title: 1,
+          status: 1,
+          is_new: 1,
+          ntp_date: 1,
+          created_at: 1,
+          updated_at: 1,
+          remarks: 1,
+          remarks_count: 1,
+        }
+      },
+      { $sort: sort },
+      ...(cursor ? [] : [{ $skip: skip }]),
+      { $limit: limit },
+      ];
+
+      const booksAggregation = await BookModel.aggregate(pipeline);
 
       const totalItems = await BookModel.countDocuments(filter);
       const filterOptions = await this.getFilterOptions();
@@ -195,18 +231,24 @@ export class BookService {
         })) : [],
       }));
 
-      return {
+      const result = {
         data: mappedData,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalItems / limit),
           totalItems,
           itemsPerPage: limit,
-          hasNext: page * limit < totalItems,
-          hasPrev: page > 1,
+          hasNext: cursor ? mappedData.length === limit : page * limit < totalItems,
+          hasPrev: cursor ? Boolean(cursor) : page > 1,
         },
         filters: filterOptions,
       };
+
+      if (config.features.enableCache) {
+        cache.set('books:list', { q: queryParams, u: user?.username }, result, (config.cache.defaultTtlSeconds || 120) * 1000);
+      }
+
+      return result;
     } catch (error) {
       logger.error('Error fetching books', error);
       throw error;
@@ -281,6 +323,7 @@ export class BookService {
       }
 
       logger.info(`Book created successfully: ${bookCode} by ${user?.username || 'system'}`);
+      cache.invalidateNamespace('books:list');
       return await this.getBookByCode(bookCode!);
     } catch (error) {
       logger.error('Error creating book', error);
@@ -352,6 +395,7 @@ export class BookService {
       }
 
       logger.info(`Book updated successfully: ${bookCode} -> ${newBookCode}`);
+      cache.invalidateNamespace('books:list');
       return await this.getBookByCode(newBookCode);
     } catch (error) {
       logger.error(`Error updating book ${bookCode}`, error);
@@ -379,6 +423,7 @@ export class BookService {
       await RemarkModel.deleteMany({ book_code: bookCode });
 
       logger.info(`Book deleted successfully: ${bookCode}`);
+      cache.invalidateNamespace('books:list');
     } catch (error) {
       logger.error(`Error deleting book ${bookCode}`, error);
       throw error;
@@ -430,6 +475,7 @@ export class BookService {
       });
 
       logger.info(`Remark added to book ${bookCode}`);
+      cache.invalidateNamespace('books:list');
       return remark;
     } catch (error) {
       logger.error(`Error adding remark to book ${bookCode}`, error);
@@ -491,6 +537,7 @@ export class BookService {
       const updatedRemark = await RemarkModel.findByIdAndUpdate(remarkId, updateFields, { new: true });
 
       logger.info(`Remark ${remarkId} updated for book ${bookCode}`);
+      cache.invalidateNamespace('books:list');
       return updatedRemark;
     } catch (error) {
       logger.error(`Error updating remark ${remarkId} for book ${bookCode}`, error);
@@ -525,6 +572,7 @@ export class BookService {
 
       await RemarkModel.findByIdAndDelete(remarkId);
       logger.info(`Remark ${remarkId} deleted from book ${bookCode}`);
+      cache.invalidateNamespace('books:list');
     } catch (error) {
       logger.error(`Error deleting remark ${remarkId} from book ${bookCode}`, error);
       throw error;

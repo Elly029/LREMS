@@ -22,6 +22,20 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
+    },
+    build: {
+      chunkSizeWarningLimit: 700,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react'],
+            'react-dom': ['react-dom'],
+            'react-datepicker': ['react-datepicker'],
+            jspdf: ['jspdf', 'jspdf-autotable'],
+            xlsx: ['xlsx'],
+          }
+        }
+      }
     }
   };
 });

@@ -122,6 +122,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Response time header
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const durationMs = Number(end - start) / 1_000_000;
+    res.setHeader('X-Response-Time', `${durationMs.toFixed(2)}ms`);
+    logger.debug(`Response time ${req.method} ${req.path}: ${durationMs.toFixed(2)}ms`);
+  });
+  next();
+});
+
 // Health check endpoint
 app.get('/health', async (req: Request, res: Response) => {
   const healthCheck = {

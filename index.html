@@ -14,10 +14,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Preconnect/DNS-Prefetch to backend/API -->
+  <link rel="preconnect" href="https://lrems.up.railway.app">
+  <link rel="dns-prefetch" href="https://lrems.up.railway.app">
 
-  <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
-  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+  <!-- Heavy export libraries are now lazy-loaded via dynamic imports -->
   <script type="importmap">
 {
   "imports": {

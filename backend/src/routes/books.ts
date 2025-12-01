@@ -18,6 +18,17 @@ router.get('/', protect, validateBooksQuery, async (req: Request, res: Response)
       filters: result.filters
     };
 
+    const payload = JSON.stringify(response);
+    const etag = 'W/"' + Buffer.from(payload).toString('base64').slice(0, 32) + '"';
+    const ifNoneMatch = req.headers['if-none-match'];
+
+    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+    res.setHeader('ETag', etag);
+
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return res.status(304).end();
+    }
+
     res.json(response);
   } catch (error: any) {
     const errorResponse: ApiResponse = {
@@ -43,6 +54,17 @@ router.get('/:bookCode', protect, async (req: Request, res: Response) => {
       data: book,
       message: 'Book retrieved successfully'
     };
+
+    const payload = JSON.stringify(response);
+    const etag = 'W/"' + Buffer.from(payload).toString('base64').slice(0, 32) + '"';
+    const ifNoneMatch = req.headers['if-none-match'];
+
+    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+    res.setHeader('ETag', etag);
+
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return res.status(304).end();
+    }
 
     res.json(response);
   } catch (error: any) {

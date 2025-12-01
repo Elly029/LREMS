@@ -132,6 +132,7 @@ export interface BooksQueryParams {
   publisher?: string[];
   hasRemarks?: boolean;
   adminView?: boolean;
+  cursor?: string;
 }
 
 export interface BooksResponse {

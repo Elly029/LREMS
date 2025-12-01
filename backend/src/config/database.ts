@@ -8,6 +8,10 @@ export const connectDatabase = async (): Promise<boolean> => {
   try {
     const mongoUri = config.database.url || 'mongodb://localhost:27017/book_management';
     
+    if (config.nodeEnv === 'development') {
+      mongoose.set('debug', true);
+    }
+
     await mongoose.connect(mongoUri, {
       maxPoolSize: config.database.poolMax,
       minPoolSize: config.database.poolMin,

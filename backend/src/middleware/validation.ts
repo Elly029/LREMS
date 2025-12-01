@@ -91,7 +91,8 @@ export const querySchemas = {
       Joi.array().items(Joi.string())
     ).optional(),
     hasRemarks: Joi.boolean().optional(),
-    adminView: Joi.boolean().optional()
+    adminView: Joi.boolean().optional(),
+    cursor: Joi.string().hex().length(24).optional()
   })
 };
 

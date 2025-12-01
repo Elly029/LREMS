@@ -1,11 +1,10 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { Book } from '../types';
 
 import logo from '../assets/logo.png';
 
-export const exportToPDF = (books: Book[]) => {
+export const exportToPDF = async (books: Book[]) => {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF({ orientation: 'landscape' });
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -65,7 +64,8 @@ export const exportToPDF = (books: Book[]) => {
     doc.save('book_inventory.pdf');
 };
 
-export const exportToExcel = (books: Book[]) => {
+export const exportToExcel = async (books: Book[]) => {
+    const XLSX = await import('xlsx');
     const worksheet = XLSX.utils.json_to_sheet(books.map(book => ({
         "Book Code": book.bookCode,
         "Learning Area": book.learningArea,
