@@ -7,12 +7,13 @@ interface LayoutProps {
     user?: { name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
     onLogout?: () => void;
     onChangePassword?: () => void;
+    onEditProfile?: () => void;
     currentView: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics';
     onViewChange: (view: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics') => void;
     onStartEvaluatorTour?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChangePassword, currentView, onViewChange, onStartEvaluatorTour }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChangePassword, onEditProfile, currentView, onViewChange, onStartEvaluatorTour }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isTourActive, setIsTourActive] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -105,6 +106,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                                 >
                                                     Start Tour
                                                 </button>
+                                                {onEditProfile && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsDropdownOpen(false);
+                                                            onEditProfile();
+                                                        }}
+                                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        Edit Profile
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         setIsDropdownOpen(false);

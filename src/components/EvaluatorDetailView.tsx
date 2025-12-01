@@ -40,14 +40,31 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     const [assignments, setAssignments] = useState<EvaluatorAssignment[]>([]);
     const [stats, setStats] = useState<EvaluatorStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [groupBy, setGroupBy] = useState<GroupBy>('event');
+    const [groupBy, setGroupBy] = useState<GroupBy>(() => {
+        const saved = typeof window !== 'undefined' ? window.localStorage.getItem('evaluator_group_by') as GroupBy | null : null;
+        return saved ?? 'event';
+    });
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (evaluator._id) {
             fetchData();
         }
     }, [evaluator._id]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem('evaluator_group_by', groupBy);
+        }
+        // Refresh expanded groups when groupBy changes
+        const groups = new Set<string>();
+        assignments.forEach(a => {
+            const key = groupBy === 'event' ? (a.eventName || 'General Monitoring') : a.learningArea;
+            groups.add(key);
+        });
+        setExpandedGroups(groups);
+    }, [groupBy]);
 
     const fetchData = async () => {
         if (!evaluator._id) return;
@@ -75,10 +92,45 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
         }
     };
 
+    const getRowProgress = (a: EvaluatorAssignment) => {
+        const d = a.evaluatorData;
+        if (!d) return 0;
+        let done = 0;
+        const total = 6; // hasTxAndTm + 5 status fields
+        if (d.hasTxAndTm === 'Yes') done += 1;
+        if (d.individualUpload === 'Done') done += 1;
+        if (d.teamUpload === 'Done') done += 1;
+        if (d.txAndTmWithMarginalNotes === 'Done') done += 1;
+        if (d.signedSummaryForm === 'Done') done += 1;
+        if (d.clearance === 'Done') done += 1;
+        return Math.round((done / total) * 100);
+    };
+
+    const computeStatsFromAssignments = (list: EvaluatorAssignment[]): EvaluatorStats => {
+        const totalAssignments = list.length;
+        let completedAssignments = 0;
+        list.forEach(a => {
+            const p = getRowProgress(a);
+            if (p === 100) completedAssignments += 1;
+        });
+        const pendingTasks = Math.max(totalAssignments - completedAssignments, 0);
+        const completionPercentage = totalAssignments === 0 ? 0 : Math.round((completedAssignments / totalAssignments) * 100);
+        return { totalAssignments, completedAssignments, pendingTasks, completionPercentage };
+    };
+
     const groupedAssignments = useMemo(() => {
         const groups: Record<string, EvaluatorAssignment[]> = {};
 
-        assignments.forEach(assignment => {
+        assignments
+            .filter(a => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                return (
+                    (a.bookCode || '').toLowerCase().includes(q) ||
+                    (a.bookTitle || '').toLowerCase().includes(q)
+                );
+            })
+            .forEach(assignment => {
             const key = groupBy === 'event'
                 ? (assignment.eventName || 'General Monitoring')
                 : assignment.learningArea;
@@ -90,7 +142,7 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
         });
 
         return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-    }, [assignments, groupBy]);
+    }, [assignments, groupBy, searchQuery]);
 
     const toggleGroup = (key: string) => {
         const newExpanded = new Set(expandedGroups);
@@ -105,6 +157,20 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     const handleTaskUpdate = async (bookCode: string, taskField: string, newStatus: string) => {
         if (!evaluator._id) return;
 
+        const prevAssignments = assignments;
+        const updated = assignments.map(a => {
+            if (a.bookCode !== bookCode || !a.evaluatorData) return a;
+            return {
+                ...a,
+                evaluatorData: {
+                    ...a.evaluatorData,
+                    [taskField]: newStatus
+                }
+            };
+        });
+        setAssignments(updated);
+        setStats(computeStatsFromAssignments(updated));
+
         try {
             await evaluatorDashboardService.updateTaskStatus(
                 evaluator._id,
@@ -112,11 +178,12 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
                 taskField,
                 newStatus
             );
-            await fetchData();
             if (onRefresh) onRefresh();
         } catch (error) {
             console.error('Error updating task status:', error);
             alert('Failed to update task status');
+            setAssignments(prevAssignments);
+            setStats(computeStatsFromAssignments(prevAssignments));
         }
     };
 
@@ -192,6 +259,14 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Book Assignments</h3>
                 <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search book code or title"
+                            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
+                        />
+                    </div>
                     <span className="text-sm text-gray-600">Group by:</span>
                     <select
                         value={groupBy}
@@ -238,9 +313,9 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
 
                                 {isExpanded && (
                                     <div className="border-t border-gray-200">
-                                        <div className="overflow-x-auto">
+                                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
                                             <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-50">
+                                                <thead className="bg-gray-50 sticky top-0 z-10">
                                                     <tr>
                                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Book Code</th>
                                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Title</th>
@@ -250,6 +325,7 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
                                                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Marginal Notes</th>
                                                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Signed Summary</th>
                                                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Clearance</th>
+                                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Progress</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -259,7 +335,20 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
 
                                                         return (
                                                             <tr key={assignment.bookCode} className="hover:bg-gray-50">
-                                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{assignment.bookCode}</td>
+                                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span>{assignment.bookCode}</span>
+                                                                        <button
+                                                                            className="text-gray-400 hover:text-gray-600"
+                                                                            title="Copy code"
+                                                                            onClick={() => navigator.clipboard?.writeText(assignment.bookCode)}
+                                                                        >
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                                                                <path d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14H8V7h11v12z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
                                                                 <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={assignment.bookTitle}>
                                                                     {assignment.bookTitle}
                                                                 </td>
@@ -303,6 +392,15 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
                                                                         value={evalData.clearance}
                                                                         onChange={(val) => handleTaskUpdate(assignment.bookCode, 'clearance', val)}
                                                                     />
+                                                                </td>
+                                                                <td className="px-4 py-3 text-center">
+                                                                    {(() => {
+                                                                        const p = getRowProgress(assignment);
+                                                                        const color = p === 100 ? 'bg-green-100 text-green-800 border-green-200' : p >= 50 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-red-100 text-red-800 border-red-200';
+                                                                        return (
+                                                                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border ${color}`}>{p}%</span>
+                                                                        );
+                                                                    })()}
                                                                 </td>
                                                             </tr>
                                                         );

@@ -15,6 +15,19 @@ export interface EvaluatorProfile {
 }
 
 class EvaluatorService {
+    async getEvaluator(id: string): Promise<EvaluatorProfile | null> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/evaluators/${id}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch evaluator');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching evaluator:', error);
+            return null;
+        }
+    }
+
     async getAllEvaluators(): Promise<EvaluatorProfile[]> {
         try {
             const response = await fetch(`${API_BASE_URL}/evaluators`);

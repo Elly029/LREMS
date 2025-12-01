@@ -95,6 +95,24 @@ const App: React.FC = () => {
     }
   };
 
+  const handleEditProfile = async () => {
+    try {
+      if (!user?.evaluator_id) {
+        showToast('No evaluator profile linked to this account.', 'error');
+        return;
+      }
+      const evaluator = await evaluatorService.getEvaluator(user.evaluator_id);
+      if (!evaluator) {
+        showToast('Failed to load your profile.', 'error');
+        return;
+      }
+      setEditingEvaluator(evaluator);
+      setIsEvaluatorModalOpen(true);
+    } catch (err) {
+      showToast('Failed to open profile editor.', 'error');
+    }
+  };
+
   const handleLogout = () => {
     setUser(null);
     apiClient.setToken(null);
@@ -276,7 +294,12 @@ const App: React.FC = () => {
   const handleSaveEvaluator = async (evaluatorData: Omit<EvaluatorProfile, '_id'>) => {
     try {
       if (editingEvaluator && editingEvaluator._id) {
-        await evaluatorService.updateEvaluator(editingEvaluator._id, evaluatorData);
+        const updated = await evaluatorService.updateEvaluator(editingEvaluator._id, evaluatorData);
+        if (updated && user && editingEvaluator._id === user.evaluator_id) {
+          const newUser = { ...user, name: updated.name };
+          setUser(newUser);
+          localStorage.setItem('user', JSON.stringify(newUser));
+        }
         showToast('Evaluator updated successfully!', 'success');
       } else {
         await evaluatorService.createEvaluator(evaluatorData);
@@ -618,6 +641,7 @@ const App: React.FC = () => {
       user={user}
       onLogout={handleLogout}
       onChangePassword={() => setIsChangePasswordModalOpen(true)}
+      onEditProfile={user?.evaluator_id ? handleEditProfile : undefined}
       currentView={currentView}
       onViewChange={setCurrentView}
       onStartEvaluatorTour={() => evaluatorTourStartRef.current?.()}
