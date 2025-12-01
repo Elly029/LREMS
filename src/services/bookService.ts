@@ -54,6 +54,7 @@ export const bookApi = {
         status?: string[];
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
+        adminView?: boolean;
     }) {
         const response = await apiClient.get<BooksResponse>('/books', params);
 

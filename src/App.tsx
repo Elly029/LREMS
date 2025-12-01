@@ -156,7 +156,9 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await bookApi.fetchBooks();
+      const result = await bookApi.fetchBooks({
+        adminView: user?.is_admin_access || false,
+      });
       setBooks(result.books);
     } catch (err: any) {
       console.error('Error fetching books:', err);
@@ -164,7 +166,7 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // Fetch books on mount and when dataVersion changes
   useEffect(() => {
