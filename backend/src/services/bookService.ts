@@ -158,10 +158,8 @@ export class BookService {
       const sort: any = {};
       sort[mappedSortBy] = sortOrder === 'asc' ? 1 : -1;
 
-      // Get books with aggregation to include remarks
       const pipeline: any[] = [];
 
-      // Cursor-based pagination (optional)
       if (cursor) {
         const mongoose = (await import('mongoose')).default;
         const objectId = new mongoose.Types.ObjectId(cursor);
@@ -170,26 +168,31 @@ export class BookService {
       }
 
       pipeline.push({ $match: filter });
-      {
+
+      pipeline.push({
         $lookup: {
           from: 'remarks',
-            let: { bookCode: '$book_code' },
-            pipeline: [
-              { $match: { $expr: { $eq: ['$book_code', '$$bookCode'] } } },
-              { $sort: { timestamp: -1 } }
-            ],
-            as: 'remarks',
-        },
-      },
-      {
+          'let': { bookCode: '$book_code' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$book_code', '$$bookCode'] } } },
+            { $sort: { timestamp: -1 } }
+          ],
+          as: 'remarks',
+        }
+      });
+
+      pipeline.push({
         $addFields: {
-          remarks_count: { $size: 'remarks' },
-        },
-      },
-      ...(hasRemarks !== undefined
-        ? [{ $match: { remarks_count: hasRemarks ? { $gt: 0 } : 0 } }]
-        : []),
-      { $project: {
+          remarks_count: { $size: '$remarks' },
+        }
+      });
+
+      if (hasRemarks !== undefined) {
+        pipeline.push({ $match: { remarks_count: hasRemarks ? { $gt: 0 } : 0 } });
+      }
+
+      pipeline.push({
+        $project: {
           _id: 1,
           book_code: 1,
           learning_area: 1,
@@ -204,11 +207,13 @@ export class BookService {
           remarks: 1,
           remarks_count: 1,
         }
-      },
-      { $sort: sort },
-      ...(cursor ? [] : [{ $skip: skip }]),
-      { $limit: limit },
-      ];
+      });
+
+      pipeline.push({ $sort: sort });
+      if (!cursor) {
+        pipeline.push({ $skip: skip });
+      }
+      pipeline.push({ $limit: limit });
 
       const booksAggregation = await BookModel.aggregate(pipeline);
 
