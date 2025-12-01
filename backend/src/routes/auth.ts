@@ -278,7 +278,7 @@ router.post('/seed-users', async (req: Request, res: Response) => {
             { username: 'admin-l', name: 'ADMIN-L', email: 'admin-l@lrems.local', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
             { username: 'admin-c', name: 'ADMIN-C', email: 'admin-c@lrems.local', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
             { username: 'leo', name: 'Leo', email: 'leo@lrems.local', is_admin_access: false, access_rules: [{ learning_areas: ['Science'], grade_levels: [] }] },
-            { username: 'celso', name: 'Celso', email: 'celso@lrems.local', is_admin_access: false, access_rules: [{ learning_areas: ['Mathematics', 'EPP', 'TLE'], grade_levels: [] }] },
+            { username: 'celso', name: 'Celso', email: 'celso@lrems.local', is_admin_access: false, access_rules: [{ learning_areas: ['MATH', 'EPP', 'TLE'], grade_levels: [] }] },
             { username: 'nonie', name: 'Nonie', email: 'nonie@lrems.local', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
             { username: 'jc', name: 'JC', email: 'jc@lrems.local', is_admin_access: true, access_rules: [{ learning_areas: ['*'], grade_levels: [] }] },
         ];

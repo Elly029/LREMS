@@ -13,7 +13,7 @@ const users = [
         username: 'celso',
         email: 'celso@example.com',
         name: 'Celso',
-        access_rules: [{ learning_areas: ['Mathematics', 'EPP', 'TLE'], grade_levels: [] }],
+        access_rules: [{ learning_areas: ['MATH', 'EPP', 'TLE'], grade_levels: [] }],
         is_admin_access: true
     },
     {
