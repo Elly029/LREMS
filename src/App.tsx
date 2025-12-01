@@ -25,6 +25,7 @@ import { evaluatorService, EvaluatorProfile } from './services/evaluatorService'
 import { EvaluatorDashboard } from './components/EvaluatorDashboard';
 import { AddToMonitoringModal } from './components/AddToMonitoringModal';
 import { ChatPanel, ChatButton } from './components/Chat';
+import StatusChart from './components/StatusChart';
 
 interface AccessRule {
   learning_areas: string[];
@@ -48,7 +49,7 @@ const App: React.FC = () => {
   const [isEvaluatorModalOpen, setIsEvaluatorModalOpen] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<EvaluatorProfile | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard'>('inventory');
+  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics'>('inventory');
 
   // Tour handler reference
   const evaluatorTourStartRef = useRef<(() => void) | null>(null);
@@ -822,6 +823,10 @@ const App: React.FC = () => {
         />
       ) : currentView === 'evaluator-dashboard' ? (
         <EvaluatorDashboard user={user} onTourStart={(startTour) => { evaluatorTourStartRef.current = startTour; }} />
+      ) : currentView === 'analytics' ? (
+        <div className="space-y-6">
+          <StatusChart />
+        </div>
       ) : (
         <div className="space-y-6">
           <CreateEvaluationEvent

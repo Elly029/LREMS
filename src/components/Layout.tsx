@@ -7,8 +7,8 @@ interface LayoutProps {
     user?: { name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
     onLogout?: () => void;
     onChangePassword?: () => void;
-    currentView: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard';
-    onViewChange: (view: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard') => void;
+    currentView: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics';
+    onViewChange: (view: 'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics') => void;
     onStartEvaluatorTour?: () => void;
 }
 
@@ -161,6 +161,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     className={`${currentView === 'monitoring' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
                                 >
                                     Evaluation Monitoring
+                                </button>
+                            )}
+                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                                <button
+                                    onClick={() => onViewChange('analytics')}
+                                    className={`${currentView === 'analytics' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
+                                >
+                                    Analytics
                                 </button>
                             )}
                             {(!user?.evaluator_id || user?.is_admin_access) && (
