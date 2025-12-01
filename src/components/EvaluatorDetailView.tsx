@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { EvaluatorProfile } from '../services/evaluatorService';
 import { evaluatorDashboardService } from '../services/evaluatorDashboardService';
+import { Spinner } from './ui/Spinner';
+import { Alert } from './ui/Alert';
 import { EvaluatorAssignment, EvaluatorStats } from '../types';
 
 interface EvaluatorDetailViewProps {
@@ -46,6 +48,7 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     });
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (evaluator._id) {
@@ -70,6 +73,7 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
         if (!evaluator._id) return;
 
         setIsLoading(true);
+        setError(null);
         try {
             const [assignmentsData, statsData] = await Promise.all([
                 evaluatorDashboardService.getEvaluatorAssignments(evaluator._id),
@@ -85,8 +89,9 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
                 groups.add(key);
             });
             setExpandedGroups(groups);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching evaluator data:', error);
+            setError(error?.message || 'Failed to load evaluator details');
         } finally {
             setIsLoading(false);
         }
@@ -188,16 +193,14 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     };
 
     if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <span className="ml-2 text-gray-500">Loading evaluator details...</span>
-            </div>
-        );
+        return <Spinner label="Loading evaluator details..." size="md" />;
     }
 
     return (
         <div className="space-y-6">
+            {error && (
+                <Alert title="Unable to load evaluator details" message={error} tone="error" actionLabel="Retry" onAction={fetchData} />
+            )}
             {/* Back Button */}
             {showBackButton && (
                 <button

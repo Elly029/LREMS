@@ -26,6 +26,9 @@ import { EvaluatorDashboard } from './components/EvaluatorDashboard';
 import { AddToMonitoringModal } from './components/AddToMonitoringModal';
 import { ChatPanel, ChatButton } from './components/Chat';
 import StatusChart from './components/StatusChart';
+// import { DesignSystemGuide } from './components/DesignSystemGuide';
+import { Spinner } from './components/ui/Spinner';
+import { TableSkeleton } from './components/ui/Skeleton';
 
 interface AccessRule {
   learning_areas: string[];
@@ -49,7 +52,7 @@ const App: React.FC = () => {
   const [isEvaluatorModalOpen, setIsEvaluatorModalOpen] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<EvaluatorProfile | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics'>('inventory');
+  const [currentView, setCurrentView] = useState<'inventory' | 'monitoring' | 'admin' | 'create-evaluation' | 'evaluators' | 'evaluator-dashboard' | 'analytics' | 'design-guide'>('inventory');
 
   // Tour handler reference
   const evaluatorTourStartRef = useRef<(() => void) | null>(null);
@@ -759,9 +762,8 @@ const App: React.FC = () => {
           {/* Main Content */}
           <div id="data-table" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
             {loading && (
-              <div className="flex flex-col justify-center items-center h-64 p-4">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mb-4"></div>
-                <span className="text-gray-500 font-medium text-center">Loading your library...</span>
+              <div className="p-4">
+                <TableSkeleton rows={10} />
               </div>
             )}
 
@@ -789,8 +791,8 @@ const App: React.FC = () => {
               !loading && !error && (
                 <>
                   {isFiltering && (
-                    <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <div className="absolute inset-0 bg-white/75 flex items-center justify-center z-10">
+                      <Spinner label="Applying filters..." size="sm" />
                     </div>
                   )}
                   <DataTable
@@ -826,17 +828,21 @@ const App: React.FC = () => {
               </button>
             )}
           </div>
-          <MonitoringTable
-            data={filteredMonitoringData}
-            headerOffset={64}
-            onUpdate={handleUpdateMonitoring}
-            onRemove={handleRemoveFromMonitoring}
-            allBooks={books}
-            user={user || undefined}
-            onViewRemarks={handleViewRemarks}
-            onAddRemark={handleOpenAddRemarkModal}
-            onUpdateEventName={handleUpdateEventName}
-          />
+          {monitoringLoading ? (
+            <Spinner label="Loading monitoring data..." size="md" />
+          ) : (
+            <MonitoringTable
+              data={filteredMonitoringData}
+              headerOffset={64}
+              onUpdate={handleUpdateMonitoring}
+              onRemove={handleRemoveFromMonitoring}
+              allBooks={books}
+              user={user || undefined}
+              onViewRemarks={handleViewRemarks}
+              onAddRemark={handleOpenAddRemarkModal}
+              onUpdateEventName={handleUpdateEventName}
+            />
+          )}
         </div>
       ) : currentView === 'evaluators' ? (
         <EvaluatorsList
@@ -851,6 +857,8 @@ const App: React.FC = () => {
         <div className="space-y-6">
           <StatusChart />
         </div>
+      ) : currentView === 'design-guide' ? (
+        <div className="p-6 text-gray-500">Design System Guide component not implemented yet.</div>
       ) : (
         <div className="space-y-6">
           <CreateEvaluationEvent

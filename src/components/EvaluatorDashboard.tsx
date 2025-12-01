@@ -5,6 +5,9 @@ import { DashboardStats } from '../types';
 import { SearchIcon } from './Icons';
 import { useEvaluatorDashboardTour } from './EvaluatorDashboardTour';
 import { EvaluatorDetailView } from './EvaluatorDetailView';
+import { Spinner } from './ui/Spinner';
+import { StatsSkeleton } from './ui/Skeleton';
+import { Alert } from './ui/Alert';
 
 interface AccessRule {
     learning_areas: string[];
@@ -28,6 +31,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
     const [evaluators, setEvaluators] = useState<EvaluatorProfile[]>([]);
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEvaluator, setSelectedEvaluator] = useState<EvaluatorProfile | null>(null);
     const { startTour } = useEvaluatorDashboardTour({ user });
@@ -45,6 +49,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
 
     const fetchData = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const [evalData, statsData] = await Promise.all([
                 evaluatorService.getAllEvaluators(),
@@ -60,8 +65,9 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
                     setSelectedEvaluator(evaluatorProfile);
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching dashboard data:', error);
+            setError(error?.message || 'Failed to load dashboard');
         } finally {
             setIsLoading(false);
         }
@@ -112,16 +118,14 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
     }
 
     if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <span className="ml-2 text-gray-500">Loading dashboard...</span>
-            </div>
-        );
+        return <Spinner label="Loading dashboard..." size="md" />;
     }
 
     return (
         <div className="space-y-6">
+            {error && (
+                <Alert title="Unable to load dashboard" message={error} tone="error" actionLabel="Retry" onAction={fetchData} />
+            )}
             {/* Header */}
             <div>
                 <h2 className="text-2xl font-bold text-gray-900">Evaluator Dashboard</h2>
@@ -131,7 +135,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
             </div>
 
             {/* Statistics Cards */}
-            {stats && (
+            {stats ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="stats-section">
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                         <div className="text-sm text-gray-500 font-medium">Total Evaluators</div>
@@ -150,6 +154,8 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
                         <div className="text-3xl font-bold text-green-600 mt-1">{stats.averageCompletionRate}%</div>
                     </div>
                 </div>
+            ) : (
+                <StatsSkeleton />
             )}
 
             {/* Search Bar */}
