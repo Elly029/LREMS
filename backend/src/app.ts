@@ -128,7 +128,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.on('finish', () => {
     const end = process.hrtime.bigint();
     const durationMs = Number(end - start) / 1_000_000;
-    res.setHeader('X-Response-Time', `${durationMs.toFixed(2)}ms`);
     logger.debug(`Response time ${req.method} ${req.path}: ${durationMs.toFixed(2)}ms`);
   });
   next();
