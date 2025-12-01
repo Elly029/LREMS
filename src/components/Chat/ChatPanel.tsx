@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { chatService, Conversation, Message, ChatUser } from '../../services/chatService';
 import { ChatIcon, SendIcon, UserIcon, UsersIcon, CloseIcon, SearchIcon } from './ChatIcons';
+import { MessageItem } from './MessageItem';
 
 interface ChatPanelProps {
     isOpen: boolean;
@@ -19,6 +20,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [hasMore, setHasMore] = useState<boolean>(true);
+    const [loadingMore, setLoadingMore] = useState<boolean>(false);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('conversations');
@@ -32,6 +35,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,40 +52,109 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
 
     const fetchMessages = useCallback(async (conversationId: string) => {
         try {
-            const data = await chatService.getMessages(conversationId);
+            const data = await chatService.getMessages(conversationId, 50);
             setMessages(data);
+            setHasMore(data.length === 50);
             await chatService.markAsRead(conversationId);
         } catch (error) {
             console.error('Failed to fetch messages:', error);
         }
     }, []);
 
+    const fetchMoreMessages = useCallback(async () => {
+        if (!selectedConversation || loadingMore || !hasMore) return;
+        const container = messagesContainerRef.current;
+        const prevScrollHeight = container?.scrollHeight || 0;
+        setLoadingMore(true);
+        try {
+            const oldest = messages[0]?.created_at;
+            const older = await chatService.getMessages(selectedConversation.conversation_id, 50, oldest);
+            if (older.length > 0) {
+                setMessages(prev => [...older, ...prev]);
+                setHasMore(older.length === 50);
+                // Preserve scroll position after prepending
+                requestAnimationFrame(() => {
+                    const newScrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+                    const diff = newScrollHeight - prevScrollHeight;
+                    if (messagesContainerRef.current) {
+                        messagesContainerRef.current.scrollTop = diff;
+                    }
+                });
+            } else {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error('Failed to load older messages:', error);
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [selectedConversation, loadingMore, hasMore, messages]);
+
 
     useEffect(() => {
-        if (isOpen) {
-            fetchConversations();
+        const startPolling = () => {
+            if (pollIntervalRef.current) return;
             pollIntervalRef.current = setInterval(() => {
                 fetchConversations();
                 if (selectedConversation) {
                     fetchMessages(selectedConversation.conversation_id);
                 }
             }, 5000);
-        }
-        return () => {
+        };
+        const stopPolling = () => {
             if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
             }
+        };
+        if (isOpen) {
+            fetchConversations();
+            if (document.visibilityState === 'visible') {
+                startPolling();
+            }
+        }
+        const onVisibilityChange = () => {
+            if (!isOpen) return;
+            if (document.visibilityState === 'visible') {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            stopPolling();
         };
     }, [isOpen, fetchConversations, fetchMessages, selectedConversation]);
 
     useEffect(() => {
-        scrollToBottom();
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 80;
+        if (nearBottom) scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const onScroll = () => {
+            if (container.scrollTop < 100 && hasMore && !loadingMore) {
+                fetchMoreMessages();
+            }
+        };
+        container.addEventListener('scroll', onScroll);
+        return () => {
+            container.removeEventListener('scroll', onScroll);
+        };
+    }, [hasMore, loadingMore, fetchMoreMessages]);
 
     const handleSelectConversation = async (conversation: Conversation) => {
         setSelectedConversation(conversation);
         setViewMode('messages');
         setLoading(true);
+        setMessages([]);
+        setHasMore(true);
         await fetchMessages(conversation.conversation_id);
         setLoading(false);
     };
@@ -523,7 +596,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                             </div>
 
                             {/* Messages */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                                 {loading ? (
                                     <div className="flex items-center justify-center h-full">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -537,35 +610,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                                         </div>
                                     </div>
                                 ) : (
-                                    messages.map((msg) => {
-                                        const isOwnMessage = msg.sender_id === currentUser._id;
-                                        return (
-                                            <div
-                                                key={msg._id}
-                                                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                                            >
-                                                <div className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-                                                    {!isOwnMessage && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-medium text-gray-600">{msg.sender_name}</span>
-                                                            <span className={`text-xs px-1.5 py-0.5 rounded ${getRoleBadge(msg.sender_role)}`}>
-                                                                {msg.sender_role}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    <div className={`px-4 py-2 rounded-2xl ${isOwnMessage
-                                                        ? 'bg-primary-600 text-white rounded-br-sm'
-                                                        : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                                                        }`}>
-                                                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                                                    </div>
-                                                    <span className="text-xs text-gray-400">
-                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
+                                    <>
+                                        {loadingMore && (
+                                            <div className="flex justify-center">
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
                                             </div>
-                                        );
-                                    })
+                                        )}
+                                        {messages.map((msg) => (
+                                            <MessageItem
+                                                key={msg._id}
+                                                message={msg}
+                                                isOwnMessage={msg.sender_id === currentUser._id}
+                                                getRoleBadge={getRoleBadge}
+                                            />
+                                        ))}
+                                    </>
                                 )}
                                 <div ref={messagesEndRef} />
                             </div>

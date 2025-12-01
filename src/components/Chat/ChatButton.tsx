@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { chatService } from '../../services/chatService';
 import { ChatIcon } from './ChatIcons';
 
@@ -8,6 +8,7 @@ interface ChatButtonProps {
 
 export const ChatButton: React.FC<ChatButtonProps> = ({ onClick }) => {
     const [unreadCount, setUnreadCount] = useState(0);
+    const intervalRef = useRef<number | null>(null);
 
     useEffect(() => {
         const fetchUnreadCount = async () => {
@@ -19,10 +20,34 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ onClick }) => {
             }
         };
 
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds (optimized to reduce API load)
+        const startPolling = () => {
+            if (intervalRef.current != null) return;
+            intervalRef.current = window.setInterval(fetchUnreadCount, 30000);
+        };
+        const stopPolling = () => {
+            if (intervalRef.current != null) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
 
-        return () => clearInterval(interval);
+        fetchUnreadCount();
+        if (document.visibilityState === 'visible') {
+            startPolling();
+        }
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            stopPolling();
+        };
     }, []);
 
     return (
