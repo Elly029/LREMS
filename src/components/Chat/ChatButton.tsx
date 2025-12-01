@@ -20,7 +20,7 @@ export const ChatButton: React.FC<ChatButtonProps> = ({ onClick }) => {
         };
 
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
+        const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds (optimized to reduce API load)
 
         return () => clearInterval(interval);
     }, []);
