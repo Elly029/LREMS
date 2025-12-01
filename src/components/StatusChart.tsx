@@ -57,6 +57,11 @@ const StatusChart: React.FC = () => {
                 adminView: true,
             });
 
+            // Filter books to only include Grades 1 and 3
+            const filteredBooks = response.books.filter((book: Book) =>
+                book.gradeLevel === 1 || book.gradeLevel === 3
+            );
+
             // Process data by learning area and status
             const dataByArea: { [key: string]: StatusData } = {};
 
@@ -69,8 +74,8 @@ const StatusChart: React.FC = () => {
                 };
             });
 
-            // Count books by learning area and status
-            response.books.forEach((book: Book) => {
+            // Count books by learning area and status (only Grades 1 & 3)
+            filteredBooks.forEach((book: Book) => {
                 const area = book.learningArea;
                 const status = book.status;
 
@@ -127,7 +132,7 @@ const StatusChart: React.FC = () => {
     return (
         <div className="status-chart-container">
             <div className="chart-header">
-                <h2 className="chart-title">Learning Resource Status by Learning Area</h2>
+                <h2 className="chart-title">Learning Resource Status by Learning Area (Grades 1 & 3)</h2>
                 <button className="refresh-button" onClick={fetchData} title="Refresh data">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
@@ -205,7 +210,7 @@ const StatusChart: React.FC = () => {
             <div className="chart-summary">
                 <div className="summary-card">
                     <div className="summary-value">{chartData.reduce((sum, d) => sum + d.total, 0)}</div>
-                    <div className="summary-label">Total Resources</div>
+                    <div className="summary-label">Total Resources (Grades 1 & 3)</div>
                 </div>
                 <div className="summary-card">
                     <div className="summary-value">{learningAreas.length}</div>
