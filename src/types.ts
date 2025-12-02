@@ -114,6 +114,7 @@ export interface User {
   name: string;
   token: string;
   access_rules?: AccessRule[];
+  access_rules_version?: number; // For cache invalidation
   is_admin_access?: boolean;
   evaluator_id?: string;
   role?: string;

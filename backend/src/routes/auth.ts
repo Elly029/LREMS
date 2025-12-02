@@ -49,6 +49,7 @@ router.post('/login', async (req: Request, res: Response) => {
             username: user.username,
             name: user.name,
             access_rules: user.access_rules,
+            access_rules_version: user.access_rules_version || 1,
             is_admin_access: user.is_admin_access,
             evaluator_id: user.evaluator_id,
             token: generateToken((user._id as unknown) as string),
@@ -98,6 +99,51 @@ router.get('/me', protect, async (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   POST /api/auth/validate
+// @desc    Validate if user session is still valid (check access_rules_version)
+// @access  Private
+router.post('/validate', protect, async (req: Request, res: Response) => {
+    try {
+        const { access_rules_version } = req.body;
+
+        const user = await User.findById(req.user?._id).select('-password');
+        if (!user) {
+            return res.status(404).json({
+                valid: false,
+                reason: 'user_not_found',
+                message: 'User not found'
+            });
+        }
+
+        const currentVersion = user.access_rules_version || 1;
+        const clientVersion = access_rules_version || 1;
+
+        if (currentVersion !== clientVersion) {
+            console.log(`Session invalidated for user ${user.username}: version mismatch (client: ${clientVersion}, server: ${currentVersion})`);
+            return res.json({
+                valid: false,
+                reason: 'access_rules_changed',
+                message: 'Your access permissions have been updated. Please log in again.',
+                current_version: currentVersion
+            });
+        }
+
+        res.json({
+            valid: true,
+            access_rules: user.access_rules,
+            access_rules_version: currentVersion,
+            is_admin_access: user.is_admin_access
+        });
+    } catch (error) {
+        console.error('Validation error:', error);
+        res.status(500).json({
+            valid: false,
+            reason: 'server_error',
+            message: 'Server error during validation'
+        });
     }
 });
 

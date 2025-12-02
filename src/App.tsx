@@ -6,6 +6,7 @@ import { BookFormModal } from './components/BookFormModal';
 import { AddRemarkModal } from './components/AddRemarkModal';
 import { PlusIcon, SearchIcon, RefreshIcon } from './components/Icons';
 import { useDebounce } from './hooks/useDebounce';
+import { useSessionValidation } from './hooks/useSessionValidation';
 import { Toast } from './components/Toast';
 import { RemarkHistoryModal } from './components/RemarkHistoryModal';
 import { bookApi } from './services/bookService';
@@ -15,11 +16,11 @@ import { EvaluatorsList } from './components/EvaluatorsList';
 import { ExportButtons } from './components/ExportButtons';
 import { LoginPage } from './components/LoginPage';
 import { apiClient } from './services/api';
-import { 
-  clearAllPersistence, 
-  nsKey, 
-  validateStorageIsolation, 
-  setCurrentUserId, 
+import {
+  clearAllPersistence,
+  nsKey,
+  validateStorageIsolation,
+  setCurrentUserId,
   migrateLegacyKey,
   setIsFirstLogin,
   createUserSession,
@@ -65,7 +66,7 @@ const App: React.FC = () => {
         apiClient.setToken(parsedUser.token);
         setCurrentUserId(parsedUser._id);
         validateStorageIsolation(parsedUser._id);
-        
+
         // Check if this is a page refresh (session exists) or fresh browser open
         // If session exists, this is a refresh - don't trigger first login behaviors
         const sessionExists = hasExistingSession(parsedUser._id);
@@ -75,7 +76,7 @@ const App: React.FC = () => {
         }
         // Mark as NOT first login since we're restoring from storage
         setIsFirstLogin(false);
-        
+
         if (parsedUser.evaluator_id && !parsedUser.is_admin_access) {
           setCurrentView('evaluator-dashboard');
         }
@@ -90,17 +91,17 @@ const App: React.FC = () => {
   const handleLogin = async (username: string, password: string) => {
     try {
       const response = await apiClient.post<User>('/auth/login', { username, password });
-      
+
       // Clear all previous user's data to ensure complete isolation
       await clearAllPersistence();
-      
+
       // Set up new user session
       setUser(response);
       apiClient.setToken(response.token);
       localStorage.setItem('user', JSON.stringify(response));
       setCurrentUserId(response._id);
       validateStorageIsolation(response._id);
-      
+
       // Create a new session for this user and mark as first login
       // This enables tour to show for new accounts
       createUserSession(response._id);
@@ -142,13 +143,13 @@ const App: React.FC = () => {
     apiClient.setToken(null);
     setCurrentUserId(null);
     setIsFirstLogin(false);
-    
+
     // Reset view to default
     setCurrentView('inventory');
-    
+
     // Clear all persisted data to ensure complete isolation between accounts
     await clearAllPersistence();
-    
+
     // Clear in-memory data states
     setBooks([]);
     setMonitoringData([]);
@@ -156,6 +157,13 @@ const App: React.FC = () => {
     setSortConfig({ key: 'bookCode', direction: 'ascending' });
     setSearchTerm('');
   };
+
+  // Automatic session validation - checks if access rules have changed
+  useSessionValidation({
+    user,
+    onSessionInvalid: handleLogout,
+    validationInterval: 5 * 60 * 1000, // Check every 5 minutes
+  });
 
   // Data state
   const [books, setBooks] = useState<Book[]>([]);
@@ -215,11 +223,11 @@ const App: React.FC = () => {
   // Auto-refresh data every 30 seconds when on inventory view
   useEffect(() => {
     if (!user || currentView !== 'inventory') return;
-    
+
     const intervalId = setInterval(() => {
       fetchBooks(false); // Silent refresh without loading indicator
     }, 30000); // 30 seconds
-    
+
     return () => clearInterval(intervalId);
   }, [user, currentView, fetchBooks]);
 
@@ -624,11 +632,11 @@ const App: React.FC = () => {
   // Auto-refresh monitoring data every 30 seconds
   useEffect(() => {
     if (!user || currentView !== 'monitoring') return;
-    
+
     const intervalId = setInterval(() => {
       fetchMonitoringData(false); // Silent refresh
     }, 30000);
-    
+
     return () => clearInterval(intervalId);
   }, [user, currentView, fetchMonitoringData]);
 

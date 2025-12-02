@@ -15,6 +15,7 @@ interface IUser extends mongoose.Document {
     username: string;
     name: string;
     access_rules: IAccessRule[];
+    access_rules_version?: number;
     is_admin_access?: boolean;
 }
 
@@ -29,6 +30,7 @@ const UserSchema = new mongoose.Schema({
     password: String,
     name: String,
     access_rules: [AccessRuleSchema],
+    access_rules_version: { type: Number, default: 1 },
     is_admin_access: { type: Boolean, default: false },
     evaluator_id: String,
     created_at: Date,
@@ -104,15 +106,17 @@ async function updateFacilitatorAccessRules() {
                 continue;
             }
 
-            // Update the access rules
+            // Update the access rules and increment version
             user.access_rules = [accessRule];
             user.is_admin_access = false; // Ensure they're not admin
+            user.access_rules_version = (user.access_rules_version || 1) + 1; // Increment version
             await user.save();
 
             console.log(`✅ Updated ${username}:`);
             console.log(`   Name: ${user.name}`);
             console.log(`   Learning Areas: ${accessRule.learning_areas.join(', ')}`);
             console.log(`   Grade Levels: ${accessRule.grade_levels.length > 0 ? accessRule.grade_levels.join(', ') : 'All'}`);
+            console.log(`   Version: ${user.access_rules_version} (incremented for cache invalidation)`);
             console.log('');
 
             updatedCount++;

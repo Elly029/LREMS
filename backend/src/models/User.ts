@@ -12,6 +12,7 @@ export interface IUser extends Document {
     password: string; // Hashed
     name: string;
     access_rules: IAccessRule[];
+    access_rules_version: number; // Incremented when access rules change - for cache invalidation
     is_admin_access?: boolean;
     evaluator_id?: string; // Link to Evaluator profile
     created_at: Date;
@@ -50,6 +51,10 @@ const UserSchema: Schema = new Schema(
         access_rules: {
             type: [AccessRuleSchema],
             default: [],
+        },
+        access_rules_version: {
+            type: Number,
+            default: 1,
         },
         is_admin_access: {
             type: Boolean,
