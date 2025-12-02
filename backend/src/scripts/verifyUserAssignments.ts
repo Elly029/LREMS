@@ -16,8 +16,8 @@ const checkUsers = async () => {
 
         const usernamesToCheck = [
             'celso',
-            'Mak',
-            'Rhod',
+            'mak',
+            'rhod',
             'ven',
             'micah',
             'leo',
@@ -25,6 +25,18 @@ const checkUsers = async () => {
             'jc',
             'nonie'
         ];
+
+        const expected: Record<string, { areas: string[] | '*', grades: number[] | '*' }> = {
+            celso: { areas: ['Mathematics','Math','EPP','TLE'], grades: '*' },
+            mak: { areas: ['English','Reading & Literacy','Reading and Literacy'], grades: '*' },
+            rhod: { areas: ['Values Education','GMRC'], grades: '*' },
+            ven: { areas: ['GMRC'], grades: '*' },
+            micah: { areas: ['AP','Araling Panlipunan','Makabansa','MAKABANSA'], grades: '*' },
+            leo: { areas: ['Science'], grades: '*' },
+            rejoice: { areas: ['Language','Filipino'], grades: '*' },
+            jc: { areas: '*', grades: [1,3] },
+            nonie: { areas: '*', grades: [1,3] }
+        };
 
         // List all users to debug
         const allUsers = await User.find({});
@@ -62,6 +74,27 @@ const checkUsers = async () => {
                 });
             } else {
                 console.log('Access Rules: None (or implied full access if admin)');
+            }
+            const exp = expected[user.username.toLowerCase()];
+            if (exp) {
+                let areasOk = false;
+                if (exp.areas === '*') {
+                    areasOk = user.access_rules.some(r => r.learning_areas.includes('*'));
+                } else {
+                    const set = new Set(exp.areas);
+                    const userAreas = new Set(user.access_rules.flatMap(r => r.learning_areas));
+                    areasOk = exp.areas.every(a => userAreas.has(a));
+                }
+                let gradesOk = false;
+                if (exp.grades === '*') {
+                    gradesOk = user.access_rules.every(r => !r.grade_levels || r.grade_levels.length === 0);
+                } else {
+                    const userGrades = new Set(user.access_rules.flatMap(r => r.grade_levels || []));
+                    gradesOk = exp.grades.every(g => userGrades.has(g));
+                }
+                console.log(`Expected Areas: ${Array.isArray(exp.areas) ? exp.areas.join(', ') : 'ALL'}`);
+                console.log(`Expected Grades: ${Array.isArray(exp.grades) ? exp.grades.join(', ') : 'ALL'}`);
+                console.log(`Match: areas=${areasOk}, grades=${gradesOk}`);
             }
             console.log('-----------------------------------');
         }

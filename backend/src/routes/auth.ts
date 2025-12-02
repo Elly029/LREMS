@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import config from '../config/environment';
 import { protect } from '../middleware/auth';
+import cache from '../utils/cache';
 
 const router = Router();
 
@@ -42,8 +43,9 @@ router.post('/login', async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
-        // Successful login
-        console.log(`User ${username} logged in successfully`);
+        // Successful login - clear cache to ensure fresh data for this user
+        cache.clearAll();
+        console.log(`User ${username} logged in successfully, cache cleared`);
         res.json({
             _id: user._id,
             username: user.username,
@@ -347,6 +349,18 @@ router.post('/seed-users', async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Seed error:', error);
         res.status(500).json({ message: 'Seed failed', error: error.message });
+    }
+});
+
+// Clear cache endpoint (for debugging)
+router.post('/clear-cache', protect, async (req: Request, res: Response) => {
+    try {
+        cache.clearAll();
+        console.log(`Cache cleared by user ${req.user?.username}`);
+        res.json({ message: 'Cache cleared successfully' });
+    } catch (error: any) {
+        console.error('Clear cache error:', error);
+        res.status(500).json({ message: 'Failed to clear cache', error: error.message });
     }
 });
 

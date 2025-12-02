@@ -8,14 +8,9 @@ import cache from '@/utils/cache';
 export class EvaluationMonitoringService {
   // Check if user is admin (has full access)
   private isAdmin(user: IUser): boolean {
-    if (!user) return false;
-    if (!user.access_rules) return false;
-    const username = (user.username || '').toLowerCase();
+    const username = (user?.username || '').toLowerCase();
     if (username === 'jc' || username === 'nonie') return false;
-    return user.access_rules.some(rule =>
-      rule.learning_areas.includes('*') &&
-      (!rule.grade_levels || rule.grade_levels.length === 0)
-    );
+    return Boolean(user?.is_admin_access);
   }
 
   // Validate user access
@@ -26,7 +21,7 @@ export class EvaluationMonitoringService {
     }
 
     for (const rule of user.access_rules) {
-      const allowedScienceUsers = ['leo', 'test-user'];
+      const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
       const username = (user.username || '').toLowerCase();
       const areaMatchRaw = rule.learning_areas.includes('*') || rule.learning_areas.includes(learningArea);
       const areaMatch = learningArea === 'Science' ? areaMatchRaw && allowedScienceUsers.includes(username) : areaMatchRaw;
@@ -40,17 +35,41 @@ export class EvaluationMonitoringService {
     try {
       let filter: any = {};
 
+      // Area overrides for specific users
+      const areaOverrides: { [key: string]: string[] } = {
+        celso: ['Mathematics', 'Math', 'EPP', 'TLE'],
+        mak: ['English', 'Reading & Literacy', 'Reading and Literacy'],
+        rhod: ['Values Education', 'GMRC'],
+        ven: ['GMRC'],
+        micah: ['AP', 'Araling Panlipunan', 'Makabansa', 'MAKABANSA'],
+        leo: ['Science'],
+        rejoice: ['Language', 'Filipino'],
+      };
+      const gradeOverrides: { [key: string]: number[] } = {
+        jc: [1, 3],
+        nonie: [1, 3],
+      };
+
+      const username = (user?.username || '').toLowerCase();
+      const overrideAreas = areaOverrides[username];
+      const gradeLimit = gradeOverrides[username];
+
       // Access control
-      if (user && user.access_rules && user.access_rules.length > 0) {
-        const isSuperAdmin = this.isAdmin(user);
+      if (user && !this.isAdmin(user)) {
+        const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
 
-        if (!isSuperAdmin) {
-          const allowedScienceUsers = ['leo', 'test-user'];
-          const username = (user.username || '').toLowerCase();
-
+        // If user has area overrides, use those
+        if (overrideAreas && overrideAreas.length > 0) {
+          filter.learning_area = { $in: overrideAreas };
+        } else if (user.access_rules && user.access_rules.length > 0) {
+          // Use access_rules if no overrides
           const learningAreas: string[] = [];
           user.access_rules.forEach(rule => {
             if (rule.learning_areas.includes('*')) {
+              // Wildcard - don't filter by area unless Science restriction applies
+              if (!allowedScienceUsers.includes(username)) {
+                // Will be handled by $nin below
+              }
               return;
             }
             const areas = rule.learning_areas.filter(a => a !== 'Science' || allowedScienceUsers.includes(username));
@@ -59,12 +78,19 @@ export class EvaluationMonitoringService {
 
           if (learningAreas.length > 0) {
             filter.learning_area = { $in: learningAreas };
+          } else if (!allowedScienceUsers.includes(username)) {
+            // Has wildcard but not allowed Science
+            filter.learning_area = { $nin: ['Science'] };
           }
+        } else {
+          // No access_rules and no overrides - only show created items
+          filter.created_by = user.username;
         }
-      }
 
-      if (user && (!user.access_rules || user.access_rules.length === 0) && !this.isAdmin(user)) {
-        filter.created_by = user.username;
+        // Apply grade restrictions
+        if (gradeLimit && gradeLimit.length > 0) {
+          filter.grade_level = { $in: gradeLimit };
+        }
       }
 
       let monitoringEntries = await EvaluationMonitoringModel.find(filter)

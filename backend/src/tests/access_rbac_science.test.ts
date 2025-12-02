@@ -55,19 +55,19 @@ describe('RBAC Science Access', () => {
     expect(res.data.find((b: any) => b.bookCode === 'SCI-G3-001')).toBeTruthy()
   })
 
-  it('restricts JC to grades 1 and 3 and no Science', async () => {
+  it('allows JC to view Science grades 1 and 3 only', async () => {
     const user = { username: 'jc', access_rules: [{ learning_areas: ['*'], grade_levels: [] }], is_admin_access: true } as any
     const resScience = await BookService.getBooks({ page: 1, limit: 10, learningArea: ['Science'] }, user)
-    expect(resScience.data.length).toBe(0)
+    expect(resScience.data.find((b: any) => b.bookCode === 'SCI-G3-001')).toBeTruthy()
 
     const resGrade1 = await BookService.getBooks({ page: 1, limit: 10, gradeLevel: [1] }, user)
     expect(resGrade1.data.find((b: any) => b.bookCode === 'MATH-G1-001')).toBeTruthy()
   })
 
-  it('restricts Nonie similarly', async () => {
+  it('allows Nonie to view Science grades 1 and 3 only', async () => {
     const user = { username: 'nonie', access_rules: [{ learning_areas: ['*'], grade_levels: [] }], is_admin_access: true } as any
     const resScience = await BookService.getBooks({ page: 1, limit: 10, learningArea: ['Science'] }, user)
-    expect(resScience.data.length).toBe(0)
+    expect(resScience.data.find((b: any) => b.bookCode === 'SCI-G3-001')).toBeTruthy()
   })
 
   it('blocks other facilitators from Science', async () => {

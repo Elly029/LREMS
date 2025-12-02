@@ -196,10 +196,18 @@ const App: React.FC = () => {
   };
 
   // Fetch books from API
-  const fetchBooks = useCallback(async (showLoading = true) => {
+  const fetchBooks = useCallback(async (showLoading = true, clearCache = false) => {
     if (showLoading) setLoading(true);
     setError(null);
     try {
+      // Clear server cache if requested (manual refresh)
+      if (clearCache) {
+        try {
+          await apiClient.clearCache();
+        } catch (e) {
+          console.warn('Failed to clear server cache:', e);
+        }
+      }
       const result = await bookApi.fetchBooks({
         limit: 1000,
         adminView: user?.is_admin_access
@@ -607,11 +615,19 @@ const App: React.FC = () => {
   const [isAddToMonitoringModalOpen, setIsAddToMonitoringModalOpen] = useState(false);
 
   // Fetch monitoring data
-  const fetchMonitoringData = useCallback(async (showLoading = true) => {
+  const fetchMonitoringData = useCallback(async (showLoading = true, clearCache = false) => {
     if (!user) return;
 
     if (showLoading) setMonitoringLoading(true);
     try {
+      // Clear server cache if requested (manual refresh)
+      if (clearCache) {
+        try {
+          await apiClient.clearCache();
+        } catch (e) {
+          console.warn('Failed to clear server cache:', e);
+        }
+      }
       const data = await monitoringApi.fetchAll();
       setMonitoringData(data);
     } catch (err) {
@@ -825,7 +841,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <button
-                    onClick={() => fetchBooks()}
+                    onClick={() => fetchBooks(true, true)}
                     disabled={loading}
                     className="p-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
                     title="Refresh data"

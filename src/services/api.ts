@@ -131,6 +131,11 @@ export class ApiClient {
             body: data ? JSON.stringify(data) : undefined,
         });
     }
+
+    // Clear server-side cache
+    async clearCache(): Promise<void> {
+        await this.post('/auth/clear-cache');
+    }
 }
 
 export const apiClient = new ApiClient();

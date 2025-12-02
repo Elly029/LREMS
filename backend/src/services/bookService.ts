@@ -29,14 +29,9 @@ export class BookService {
 
   // Check if user is admin (has full access)
   private isAdmin(user: IUser): boolean {
-    if (!user) return false;
-    if (!user.access_rules) return false;
-    const username = (user.username || '').toLowerCase();
+    const username = (user?.username || '').toLowerCase();
     if (username === 'jc' || username === 'nonie') return false;
-    return user.access_rules.some(rule =>
-      rule.learning_areas.includes('*') &&
-      (!rule.grade_levels || rule.grade_levels.length === 0)
-    );
+    return Boolean(user?.is_admin_access);
   }
 
   // Validate user access
@@ -46,7 +41,7 @@ export class BookService {
       return false;
     }
 
-    const allowedScienceUsers = ['leo', 'test-user'];
+    const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
     const limitedGradesUsers: { [key: string]: number[] } = { jc: [1, 3], nonie: [1, 3] };
     const username = (user.username || '').toLowerCase();
 
@@ -95,6 +90,19 @@ export class BookService {
 
       const usernameLower = (user?.username || '').toLowerCase();
       const allowedScienceUsersView = ['leo', 'test-user'];
+      const areaOverrides: { [key: string]: string[] } = {
+        celso: ['Mathematics', 'Math', 'EPP', 'TLE'],
+        mak: ['English', 'Reading & Literacy', 'Reading and Literacy'],
+        rhod: ['Values Education', 'GMRC'],
+        ven: ['GMRC'],
+        micah: ['AP', 'Araling Panlipunan', 'Makabansa', 'MAKABANSA'],
+        leo: ['Science'],
+        rejoice: ['Language', 'Filipino'],
+      };
+      const gradeOverrides: { [key: string]: number[] } = {
+        jc: [1, 3],
+        nonie: [1, 3],
+      };
       const requestedAreas = learningArea ? (Array.isArray(learningArea) ? learningArea : [learningArea]) : [];
       if (requestedAreas.includes('Science') && user && !this.isAdmin(user) && !allowedScienceUsersView.includes(usernameLower)) {
         logger.warn(`Unauthorized Science data view attempt by ${user.username}`);
@@ -118,10 +126,10 @@ export class BookService {
         const canBypassRestrictions = isSuperAdmin || (isAdminView && user.is_admin_access);
 
         if (!canBypassRestrictions) {
-          const allowedScienceUsers = ['leo', 'test-user'];
+          const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
           const limitGradesForUsers: { [key: string]: number[] } = { jc: [1, 3], nonie: [1, 3] };
-
           const username = (user.username || '').toLowerCase();
+          const overrideAreas = areaOverrides[username];
 
           const ruleConditions = user.access_rules.map(rule => {
             const condition: any = {};
@@ -131,10 +139,25 @@ export class BookService {
               if (!allowedScienceUsers.includes(username)) {
                 areas = areas.filter(a => a !== 'Science');
               }
+              if (overrideAreas && overrideAreas.length > 0) {
+                areas = areas.filter(a => overrideAreas.includes(a));
+              }
               if (areas.length > 0) {
                 condition.learning_area = { $in: areas };
               } else {
                 condition.learning_area = { $in: [] };
+              }
+            } else {
+              let areas = overrideAreas && overrideAreas.length > 0 ? [...overrideAreas] : [];
+              if (!allowedScienceUsers.includes(username)) {
+                if (areas.length > 0) {
+                  areas = areas.filter(a => a !== 'Science');
+                } else {
+                  condition.learning_area = { $nin: ['Science'] };
+                }
+              }
+              if (areas.length > 0) {
+                condition.learning_area = { $in: areas };
               }
             }
 
@@ -147,19 +170,50 @@ export class BookService {
             return condition;
           });
 
+          // Build the created_by condition with area restrictions
+          const createdByCondition: any = { created_by: user.username };
+          if (overrideAreas && overrideAreas.length > 0) {
+            createdByCondition.learning_area = { $in: overrideAreas };
+          }
+          if (limitGradesForUsers[username]) {
+            createdByCondition.grade_level = { $in: limitGradesForUsers[username] };
+          }
+          
           accessConditions = [
             { $or: ruleConditions },
-            { created_by: user.username }
+            createdByCondition
           ];
         } else if (user && !canBypassRestrictions) {
-          accessConditions = [{ created_by: user.username }];
+          const createdByCondition: any = { created_by: user.username };
+          const overrideAreas = areaOverrides[(user.username || '').toLowerCase()];
+          if (overrideAreas && overrideAreas.length > 0) {
+            createdByCondition.learning_area = { $in: overrideAreas };
+          }
+          accessConditions = [createdByCondition];
         }
       }
 
       if (user && (!user.access_rules || user.access_rules.length === 0)) {
         const isAdminView = adminView === true || String(adminView) === 'true';
         if (!isAdminView || !user.is_admin_access) {
-          accessConditions = [{ created_by: user.username }];
+          const overrideAreas = areaOverrides[usernameLower];
+          const gradeLimit = gradeOverrides[usernameLower];
+          
+          // If user has area overrides, they can only see those areas
+          if (overrideAreas && overrideAreas.length > 0) {
+            const areaCondition: any = { learning_area: { $in: overrideAreas } };
+            if (gradeLimit && gradeLimit.length > 0) {
+              areaCondition.grade_level = { $in: gradeLimit };
+            }
+            accessConditions = [areaCondition];
+          } else {
+            // No overrides - only show their own created items
+            const base: any = { created_by: user.username };
+            if (gradeLimit && gradeLimit.length > 0) {
+              base.grade_level = { $in: gradeLimit };
+            }
+            accessConditions = [base];
+          }
         }
       }
 
@@ -185,11 +239,19 @@ export class BookService {
         if (user && !this.isAdmin(user) && !allowedScienceUsersView.includes(usernameLower)) {
           areasArray = areasArray.filter(a => a !== 'Science');
         }
+        const overrideAreas = areaOverrides[usernameLower];
+        if (overrideAreas && overrideAreas.length > 0) {
+          areasArray = areasArray.filter(a => overrideAreas.includes(a));
+        }
         filter.learning_area = { $in: areasArray };
       }
 
       if (gradeLevel) {
-        const gradesArray = Array.isArray(gradeLevel) ? gradeLevel.map(Number) : [Number(gradeLevel)];
+        let gradesArray = Array.isArray(gradeLevel) ? gradeLevel.map(Number) : [Number(gradeLevel)];
+        const gradeLimit = gradeOverrides[usernameLower];
+        if (gradeLimit && gradeLimit.length > 0) {
+          gradesArray = gradesArray.filter(g => gradeLimit.includes(g));
+        }
         filter.grade_level = { $in: gradesArray };
       }
 
