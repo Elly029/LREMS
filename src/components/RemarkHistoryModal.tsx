@@ -76,7 +76,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     const hasDateRange = remark.fromDate || remark.toDate;
     const hasFromEntity = remark.from && remark.from !== 'Select...' && remark.from !== '';
     const hasToEntity = remark.to && remark.to !== 'Select...' && remark.to !== '';
-    
+
     // Remark is complete only if it has date range AND both from/to entities
     return hasDateRange && hasFromEntity && hasToEntity;
   };
@@ -472,7 +472,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
                   generalRemarks.map((remark, index) => (
                     <div key={`general-${index}`} className="bg-gradient-to-r from-gray-50 to-white border-l-4 border-gray-400 rounded-lg p-5 shadow-sm">
                       <div className="flex justify-between items-start mb-3 pb-2 border-b border-gray-200">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Remark #{index + 1}</span>
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Remark #{generalRemarks.length - index}</span>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEditRemark(remark, index)}
