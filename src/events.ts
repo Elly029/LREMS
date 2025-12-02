@@ -1,4 +1,4 @@
-type EventName = 'books:changed';
+type EventName = 'books:changed' | 'monitoring:changed';
 
 const emitter = new EventTarget();
 

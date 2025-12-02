@@ -1,6 +1,4 @@
-// Ensure API_BASE_URL is properly formatted (no trailing slash)
-const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-const API_BASE_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
+import { apiClient, ApiResponse } from './api';
 
 export interface EvaluatorProfile {
     _id?: string;
@@ -17,11 +15,8 @@ export interface EvaluatorProfile {
 class EvaluatorService {
     async getEvaluator(id: string): Promise<EvaluatorProfile | null> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/${id}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch evaluator');
-            }
-            return await response.json();
+            const response = await apiClient.get<ApiResponse<EvaluatorProfile>>(`/evaluators/${encodeURIComponent(id)}`);
+            return response.data || response as any;
         } catch (error) {
             console.error('Error fetching evaluator:', error);
             return null;
@@ -30,11 +25,8 @@ class EvaluatorService {
 
     async getAllEvaluators(): Promise<EvaluatorProfile[]> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch evaluators');
-            }
-            return await response.json();
+            const response = await apiClient.get<ApiResponse<EvaluatorProfile[]>>('/evaluators');
+            return response.data || response as any || [];
         } catch (error) {
             console.error('Error fetching evaluators:', error);
             return [];
@@ -43,11 +35,8 @@ class EvaluatorService {
 
     async searchEvaluators(query: string): Promise<EvaluatorProfile[]> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/search?query=${encodeURIComponent(query)}`);
-            if (!response.ok) {
-                throw new Error('Failed to search evaluators');
-            }
-            return await response.json();
+            const response = await apiClient.get<ApiResponse<EvaluatorProfile[]>>('/evaluators/search', { query });
+            return response.data || response as any || [];
         } catch (error) {
             console.error('Error searching evaluators:', error);
             return [];
@@ -56,19 +45,8 @@ class EvaluatorService {
 
     async createEvaluator(evaluator: Omit<EvaluatorProfile, '_id'>): Promise<EvaluatorProfile | null> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(evaluator),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to create evaluator');
-            }
-
-            return await response.json();
+            const response = await apiClient.post<ApiResponse<EvaluatorProfile>>('/evaluators', evaluator);
+            return response.data || response as any;
         } catch (error) {
             console.error('Error creating evaluator:', error);
             return null;
@@ -77,20 +55,9 @@ class EvaluatorService {
 
     async bulkCreateEvaluators(evaluators: Omit<EvaluatorProfile, '_id'>[]): Promise<{ success: boolean; count: number }> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/bulk`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ evaluators }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to bulk create evaluators');
-            }
-
-            const result = await response.json();
-            return { success: true, count: result.evaluators.length };
+            const response = await apiClient.post<ApiResponse<{ evaluators: EvaluatorProfile[] }>>('/evaluators/bulk', { evaluators });
+            const result = response.data || response as any;
+            return { success: true, count: result.evaluators?.length || 0 };
         } catch (error) {
             console.error('Error bulk creating evaluators:', error);
             return { success: false, count: 0 };
@@ -99,19 +66,8 @@ class EvaluatorService {
 
     async updateEvaluator(id: string, evaluator: Partial<EvaluatorProfile>): Promise<EvaluatorProfile | null> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(evaluator),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update evaluator');
-            }
-
-            return await response.json();
+            const response = await apiClient.put<ApiResponse<EvaluatorProfile>>(`/evaluators/${encodeURIComponent(id)}`, evaluator);
+            return response.data || response as any;
         } catch (error) {
             console.error('Error updating evaluator:', error);
             return null;
@@ -120,11 +76,8 @@ class EvaluatorService {
 
     async deleteEvaluator(id: string): Promise<boolean> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/${id}`, {
-                method: 'DELETE',
-            });
-
-            return response.ok;
+            await apiClient.delete<ApiResponse>(`/evaluators/${encodeURIComponent(id)}`);
+            return true;
         } catch (error) {
             console.error('Error deleting evaluator:', error);
             return false;
@@ -133,19 +86,8 @@ class EvaluatorService {
 
     async toggleBlock(id: string, isBlocked: boolean): Promise<EvaluatorProfile | null> {
         try {
-            const response = await fetch(`${API_BASE_URL}/evaluators/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ isBlocked }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to toggle block evaluator');
-            }
-
-            return await response.json();
+            const response = await apiClient.put<ApiResponse<EvaluatorProfile>>(`/evaluators/${encodeURIComponent(id)}`, { isBlocked });
+            return response.data || response as any;
         } catch (error) {
             console.error('Error toggling block evaluator:', error);
             return null;

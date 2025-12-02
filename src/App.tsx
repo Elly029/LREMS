@@ -18,6 +18,7 @@ import { apiClient } from './services/api';
 import { clearAllPersistence, nsKey, validateStorageIsolation, setCurrentUserId, migrateLegacyKey } from './utils/persistence';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { MonitoringTable } from './components/MonitoringTable';
+import { on, off } from './events';
 
 
 import { CreateEvaluationEvent } from './components/CreateEvaluationEvent';
@@ -564,6 +565,18 @@ const App: React.FC = () => {
     if (user && currentView === 'monitoring') {
       fetchMonitoringData();
     }
+  }, [user, currentView]);
+
+  // Listen for monitoring changes to refresh data
+  useEffect(() => {
+    const handleMonitoringChange = () => {
+      if (user && (currentView === 'monitoring' || currentView === 'evaluator-dashboard')) {
+        fetchMonitoringData();
+      }
+    };
+
+    on('monitoring:changed', handleMonitoringChange as any);
+    return () => off('monitoring:changed', handleMonitoringChange as any);
   }, [user, currentView]);
 
   const filteredMonitoringData = useMemo(() => {

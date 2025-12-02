@@ -1,12 +1,14 @@
-import { apiClient } from './api';
+import { apiClient, ApiResponse } from './api';
 import { EvaluatorAssignment, EvaluatorStats, DashboardStats } from '../types';
+import { emit } from '../events';
 
 const API_BASE = '/evaluator-dashboard';
 
 class EvaluatorDashboardService {
     async getOverallStats(): Promise<DashboardStats> {
         try {
-            return await apiClient.get<DashboardStats>(`${API_BASE}/stats`);
+            const response = await apiClient.get<ApiResponse<DashboardStats>>(`${API_BASE}/stats`);
+            return response.data || response as any;
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);
             throw error;
@@ -15,7 +17,8 @@ class EvaluatorDashboardService {
 
     async getEvaluatorAssignments(evaluatorId: string): Promise<EvaluatorAssignment[]> {
         try {
-            return await apiClient.get<EvaluatorAssignment[]>(`${API_BASE}/${evaluatorId}/assignments`);
+            const response = await apiClient.get<ApiResponse<EvaluatorAssignment[]>>(`${API_BASE}/${encodeURIComponent(evaluatorId)}/assignments`);
+            return response.data || response as any || [];
         } catch (error) {
             console.error('Error fetching evaluator assignments:', error);
             throw error;
@@ -24,7 +27,8 @@ class EvaluatorDashboardService {
 
     async getEvaluatorStats(evaluatorId: string): Promise<EvaluatorStats> {
         try {
-            return await apiClient.get<EvaluatorStats>(`${API_BASE}/${evaluatorId}/stats`);
+            const response = await apiClient.get<ApiResponse<EvaluatorStats>>(`${API_BASE}/${encodeURIComponent(evaluatorId)}/stats`);
+            return response.data || response as any;
         } catch (error) {
             console.error('Error fetching evaluator stats:', error);
             throw error;
@@ -38,11 +42,13 @@ class EvaluatorDashboardService {
         status: string
     ): Promise<void> {
         try {
-            await apiClient.patch(`${API_BASE}/${evaluatorId}/task-status`, {
+            await apiClient.patch(`${API_BASE}/${encodeURIComponent(evaluatorId)}/task-status`, {
                 bookCode,
                 taskField,
                 status
             });
+            // Emit event to notify other components of the change
+            emit('monitoring:changed', { type: 'taskUpdate', evaluatorId, bookCode, taskField, status });
         } catch (error) {
             console.error('Error updating task status:', error);
             throw error;

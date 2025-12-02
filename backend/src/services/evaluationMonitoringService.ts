@@ -3,6 +3,7 @@ import BookModel from '@/models/Book';
 import { NotFoundError, ForbiddenError } from '@/middleware/errorHandler';
 import logger from '@/utils/logger';
 import { IUser } from '@/models/User';
+import cache from '@/utils/cache';
 
 export class EvaluationMonitoringService {
   // Check if user is admin (has full access)
@@ -146,6 +147,7 @@ export class EvaluationMonitoringService {
       });
 
       logger.info(`Monitoring entry created for book ${data.bookCode} by ${user?.username || 'system'}`);
+      cache.invalidateNamespace('monitoring:list');
 
       return {
         ...entry.toObject(),
@@ -207,6 +209,7 @@ export class EvaluationMonitoringService {
       await EvaluationMonitoringModel.updateOne({ book_code: bookCode }, updateFields);
 
       logger.info(`Monitoring entry updated for book ${bookCode} by ${user?.username || 'system'}`);
+      cache.invalidateNamespace('monitoring:list');
 
       const updatedEntry = await EvaluationMonitoringModel.findOne({
         book_code: data.bookCode || bookCode
@@ -242,6 +245,7 @@ export class EvaluationMonitoringService {
       await EvaluationMonitoringModel.deleteOne({ book_code: bookCode });
 
       logger.info(`Monitoring entry deleted for book ${bookCode} by ${user?.username || 'system'}`);
+      cache.invalidateNamespace('monitoring:list');
     } catch (error) {
       logger.error(`Error deleting monitoring entry ${bookCode}`, error);
       throw error;

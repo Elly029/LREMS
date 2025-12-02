@@ -2,11 +2,14 @@ import express, { Request, Response } from 'express';
 import EvaluationMonitoring from '../models/EvaluationMonitoring';
 import Evaluator from '../models/Evaluator';
 import Book from '../models/Book';
+import { protect } from '../middleware/auth';
+import { ApiResponse } from '../types';
+import cache from '../utils/cache';
 
 const router = express.Router();
 
 // Get overall statistics for all evaluators
-router.get('/stats', async (req: Request, res: Response) => {
+router.get('/stats', protect, async (req: Request, res: Response) => {
     try {
         const [allEvaluators, allMonitoring] = await Promise.all([
             Evaluator.find(),
@@ -41,20 +44,33 @@ router.get('/stats', async (req: Request, res: Response) => {
             ? Math.round((totalCompletedTasks / totalPossibleTasks) * 100)
             : 0;
 
-        res.json({
-            totalEvaluators: allEvaluators.length,
-            activeEvaluators,
-            totalAssignments,
-            averageCompletionRate
-        });
+        const response: ApiResponse = {
+            success: true,
+            data: {
+                totalEvaluators: allEvaluators.length,
+                activeEvaluators,
+                totalAssignments,
+                averageCompletionRate
+            }
+        };
+        res.json(response);
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-        res.status(500).json({ message: 'Error fetching dashboard statistics' });
+        const errorResponse: ApiResponse = {
+            success: false,
+            error: {
+                code: 'SERVER_ERROR',
+                message: 'Error fetching dashboard statistics',
+                timestamp: new Date().toISOString(),
+                path: req.path,
+            },
+        };
+        res.status(500).json(errorResponse);
     }
 });
 
 // Get all book assignments for a specific evaluator
-router.get('/:evaluatorId/assignments', async (req: Request, res: Response) => {
+router.get('/:evaluatorId/assignments', protect, async (req: Request, res: Response) => {
     try {
         const { evaluatorId } = req.params;
 
@@ -85,15 +101,28 @@ router.get('/:evaluatorId/assignments', async (req: Request, res: Response) => {
             };
         });
 
-        res.json(assignments);
+        const response: ApiResponse = {
+            success: true,
+            data: assignments
+        };
+        res.json(response);
     } catch (error) {
         console.error('Error fetching evaluator assignments:', error);
-        res.status(500).json({ message: 'Error fetching evaluator assignments' });
+        const errorResponse: ApiResponse = {
+            success: false,
+            error: {
+                code: 'SERVER_ERROR',
+                message: 'Error fetching evaluator assignments',
+                timestamp: new Date().toISOString(),
+                path: req.path,
+            },
+        };
+        res.status(500).json(errorResponse);
     }
 });
 
 // Get statistics for a specific evaluator
-router.get('/:evaluatorId/stats', async (req: Request, res: Response) => {
+router.get('/:evaluatorId/stats', protect, async (req: Request, res: Response) => {
     try {
         const { evaluatorId } = req.params;
 
@@ -181,27 +210,49 @@ router.get('/:evaluatorId/stats', async (req: Request, res: Response) => {
             ? Math.round((totalCompletedTasks / totalPossibleTasks) * 100)
             : 0;
 
-        res.json({
-            totalAssignments,
-            completedAssignments,
-            pendingTasks,
-            completionPercentage,
-            taskBreakdown
-        });
+        const response: ApiResponse = {
+            success: true,
+            data: {
+                totalAssignments,
+                completedAssignments,
+                pendingTasks,
+                completionPercentage,
+                taskBreakdown
+            }
+        };
+        res.json(response);
     } catch (error) {
         console.error('Error fetching evaluator stats:', error);
-        res.status(500).json({ message: 'Error fetching evaluator statistics' });
+        const errorResponse: ApiResponse = {
+            success: false,
+            error: {
+                code: 'SERVER_ERROR',
+                message: 'Error fetching evaluator statistics',
+                timestamp: new Date().toISOString(),
+                path: req.path,
+            },
+        };
+        res.status(500).json(errorResponse);
     }
 });
 
 // Update task status for an evaluator on a specific book
-router.patch('/:evaluatorId/task-status', async (req: Request, res: Response) => {
+router.patch('/:evaluatorId/task-status', protect, async (req: Request, res: Response) => {
     try {
         const { evaluatorId } = req.params;
         const { bookCode, taskField, status } = req.body;
 
         if (!bookCode || !taskField || !status) {
-            return res.status(400).json({ message: 'Missing required fields: bookCode, taskField, or status' });
+            const errorResponse: ApiResponse = {
+                success: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Missing required fields: bookCode, taskField, or status',
+                    timestamp: new Date().toISOString(),
+                    path: req.path,
+                },
+            };
+            return res.status(400).json(errorResponse);
         }
 
         // Valid task fields
@@ -215,32 +266,73 @@ router.patch('/:evaluatorId/task-status', async (req: Request, res: Response) =>
         ];
 
         if (!validFields.includes(taskField)) {
-            return res.status(400).json({ message: 'Invalid task field' });
+            const errorResponse: ApiResponse = {
+                success: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid task field',
+                    timestamp: new Date().toISOString(),
+                    path: req.path,
+                },
+            };
+            return res.status(400).json(errorResponse);
         }
 
         // Find the monitoring entry
         const monitoring = await EvaluationMonitoring.findOne({ book_code: bookCode });
         if (!monitoring) {
-            return res.status(404).json({ message: 'Monitoring entry not found' });
+            const errorResponse: ApiResponse = {
+                success: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Monitoring entry not found',
+                    timestamp: new Date().toISOString(),
+                    path: req.path,
+                },
+            };
+            return res.status(404).json(errorResponse);
         }
 
         // Find the evaluator in the monitoring entry
         const evaluatorIndex = monitoring.evaluators.findIndex(e => e.id === evaluatorId);
         if (evaluatorIndex === -1) {
-            return res.status(404).json({ message: 'Evaluator not found in this monitoring entry' });
+            const errorResponse: ApiResponse = {
+                success: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Evaluator not found in this monitoring entry',
+                    timestamp: new Date().toISOString(),
+                    path: req.path,
+                },
+            };
+            return res.status(404).json(errorResponse);
         }
 
         // Update the task status
         (monitoring.evaluators[evaluatorIndex] as any)[taskField] = status;
         await monitoring.save();
+        
+        // Invalidate cache
+        cache.invalidateNamespace('monitoring:list');
 
-        res.json({
+        const response: ApiResponse = {
+            success: true,
+            data: monitoring,
             message: 'Task status updated successfully',
-            monitoring
-        });
+        };
+        res.json(response);
     } catch (error) {
         console.error('Error updating task status:', error);
-        res.status(500).json({ message: 'Error updating task status' });
+        const errorResponse: ApiResponse = {
+            success: false,
+            error: {
+                code: 'SERVER_ERROR',
+                message: 'Error updating task status',
+                timestamp: new Date().toISOString(),
+                path: req.path,
+            },
+        };
+        res.status(500).json(errorResponse);
     }
 });
 
