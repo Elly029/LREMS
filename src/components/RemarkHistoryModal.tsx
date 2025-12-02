@@ -426,7 +426,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
         return;
       }
 
-      // Call the API to delete the remark
+      console.info('Deleting remark', { bookCode: book.bookCode, remarkId: id });
       await bookApi.deleteRemark(book.bookCode, id);
 
       // Show success message
@@ -436,9 +436,19 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       if (onDataChange) {
         onDataChange();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting remark:', error);
-      alert('Failed to delete remark. Please try again.');
+      const status = error?.status;
+      const code = error?.code;
+      if (status === 404 || code === 'NOT_FOUND') {
+        alert('Remark not found. It may have been deleted already.');
+      } else if (status === 400 || code === 'VALIDATION_ERROR') {
+        alert('Invalid remark ID format.');
+      } else if (status === 403 || code === 'FORBIDDEN') {
+        alert('You do not have permission to delete this remark.');
+      } else {
+        alert('Failed to delete remark. Please try again.');
+      }
     }
   };
 

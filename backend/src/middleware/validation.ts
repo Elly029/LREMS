@@ -98,6 +98,11 @@ export const querySchemas = {
   })
 };
 
+export const remarkParamSchema = Joi.object({
+  bookCode: Joi.string().max(50).required(),
+  remarkId: Joi.string().hex().length(24).required()
+});
+
 // Validation middleware factory
 export const validate = (schema: Joi.ObjectSchema, property: 'body' | 'query' | 'params' = 'body') => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -132,3 +137,4 @@ export const validateCreateBook = validate(bookSchemas.create);
 export const validateUpdateBook = validate(bookSchemas.update);
 export const validateRemark = validate(remarkSchema);
 export const validateBooksQuery = validate(querySchemas.books, 'query');
+export const validateRemarkParams = validate(remarkParamSchema, 'params');

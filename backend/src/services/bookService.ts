@@ -564,6 +564,11 @@ export class BookService {
         throw new NotFoundError(`Book with code ${bookCode} not found`);
       }
 
+      const mongoose = (await import('mongoose')).default;
+      if (!mongoose.Types.ObjectId.isValid(remarkId)) {
+        throw new (await import('@/middleware/errorHandler')).ValidationError('Invalid remarkId format');
+      }
+
       const remark = await RemarkModel.findById(remarkId);
       if (!remark) {
         throw new NotFoundError(`Remark with ID ${remarkId} not found`);

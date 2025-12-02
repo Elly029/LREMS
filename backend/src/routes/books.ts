@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bookService from '@/services/bookService';
-import { validateBooksQuery, validateCreateBook, validateUpdateBook, validateRemark } from '@/middleware/validation';
+import { validateBooksQuery, validateCreateBook, validateUpdateBook, validateRemark, validateRemarkParams } from '@/middleware/validation';
+import logger from '@/utils/logger';
 import { ApiResponse, BooksResponse } from '@/types';
 import { protect } from '@/middleware/auth';
 
@@ -207,7 +208,7 @@ router.post('/:bookCode/remarks', protect, validateRemark, async (req: Request, 
 });
 
 // PUT /api/books/:bookCode/remarks/:remarkId - Update remark
-router.put('/:bookCode/remarks/:remarkId', protect, async (req: Request, res: Response) => {
+router.put('/:bookCode/remarks/:remarkId', protect, validateRemarkParams, async (req: Request, res: Response) => {
   try {
     const remark = await bookService.updateRemark(req.params.bookCode, req.params.remarkId, req.body, req.user);
 
@@ -219,12 +220,8 @@ router.put('/:bookCode/remarks/:remarkId', protect, async (req: Request, res: Re
 
     res.json(response);
   } catch (error: any) {
-    const isNotFound = error.message.includes('not found');
-    const isForbidden = error.name === 'ForbiddenError';
-
-    const statusCode = isNotFound ? 404 : (isForbidden ? 403 : 500);
-    const errorCode = isNotFound ? 'NOT_FOUND' : (isForbidden ? 'FORBIDDEN' : 'SERVER_ERROR');
-
+    const statusCode = error.name === 'NotFoundError' ? 404 : error.name === 'ForbiddenError' ? 403 : error.name === 'ValidationError' ? 400 : 500;
+    const errorCode = error.name === 'NotFoundError' ? 'NOT_FOUND' : error.name === 'ForbiddenError' ? 'FORBIDDEN' : error.name === 'ValidationError' ? 'VALIDATION_ERROR' : 'SERVER_ERROR';
     const errorResponse: ApiResponse = {
       success: false,
       error: {
@@ -239,8 +236,9 @@ router.put('/:bookCode/remarks/:remarkId', protect, async (req: Request, res: Re
 });
 
 // DELETE /api/books/:bookCode/remarks/:remarkId - Delete remark
-router.delete('/:bookCode/remarks/:remarkId', protect, async (req: Request, res: Response) => {
+router.delete('/:bookCode/remarks/:remarkId', protect, validateRemarkParams, async (req: Request, res: Response) => {
   try {
+    logger.info('Attempting to delete remark', { bookCode: req.params.bookCode, remarkId: req.params.remarkId, user: req.user?.username });
     await bookService.deleteRemark(req.params.bookCode, req.params.remarkId, req.user);
 
     const response: ApiResponse = {
@@ -250,12 +248,8 @@ router.delete('/:bookCode/remarks/:remarkId', protect, async (req: Request, res:
 
     res.json(response);
   } catch (error: any) {
-    const isNotFound = error.message.includes('not found');
-    const isForbidden = error.name === 'ForbiddenError';
-
-    const statusCode = isNotFound ? 404 : (isForbidden ? 403 : 500);
-    const errorCode = isNotFound ? 'NOT_FOUND' : (isForbidden ? 'FORBIDDEN' : 'SERVER_ERROR');
-
+    const statusCode = error.name === 'NotFoundError' ? 404 : error.name === 'ForbiddenError' ? 403 : error.name === 'ValidationError' ? 400 : 500;
+    const errorCode = error.name === 'NotFoundError' ? 'NOT_FOUND' : error.name === 'ForbiddenError' ? 'FORBIDDEN' : error.name === 'ValidationError' ? 'VALIDATION_ERROR' : 'SERVER_ERROR';
     const errorResponse: ApiResponse = {
       success: false,
       error: {
