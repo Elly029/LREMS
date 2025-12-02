@@ -117,6 +117,66 @@ export class BookService {
       if (user && user.access_rules && user.access_rules.length > 0) {
         const isSuperAdmin = this.isAdmin(user);
         const isAdminView = adminView === true || String(adminView) === 'true';
+        const canBypassRestrictions = isSuperAdmin || (isAdminView && user.is_admin_access);
+
+        if (!canBypassRestrictions) {
+          const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
+          const limitGradesForUsers: { [key: string]: number[] } = { jc: [1, 3], nonie: [1, 3] };
+          const username = (user.username || '').toLowerCase();
+
+          const ruleConditions = user.access_rules.map(rule => {
+            const condition: any = {};
+
+            if (!rule.learning_areas.includes('*')) {
+              let areas = [...rule.learning_areas];
+              if (!allowedScienceUsers.includes(username)) {
+                areas = areas.filter(a => a !== 'Science');
+              }
+              if (areas.length > 0) {
+                condition.learning_area = { $in: areas };
+              } else {
+                condition.learning_area = { $in: [] };
+              }
+            }
+
+            if (limitGradesForUsers[username]) {
+              condition.grade_level = { $in: limitGradesForUsers[username] };
+            } else if (rule.grade_levels && rule.grade_levels.length > 0) {
+              condition.grade_level = { $in: rule.grade_levels };
+            }
+
+            return condition;
+          });
+
+          // Build the created_by condition
+          const createdByCondition: any = { created_by: user.username };
+          if (limitGradesForUsers[username]) {
+            createdByCondition.grade_level = { $in: limitGradesForUsers[username] };
+          }
+
+          accessConditions = [
+            { $or: ruleConditions },
+            createdByCondition
+          ];
+        }
+      }
+
+      if (user && (!user.access_rules || user.access_rules.length === 0)) {
+        const isAdminView = adminView === true || String(adminView) === 'true';
+        if (!isAdminView || !user.is_admin_access) {
+          const gradeLimit = gradeOverrides[usernameLower];
+
+          // No access rules - only show their own created items
+          const base: any = { created_by: user.username };
+          if (gradeLimit && gradeLimit.length > 0) {
+            base.grade_level = { $in: gradeLimit };
+          }
+          accessConditions = [base];
+        }
+      }
+
+      // Combine search and access conditions
+      if (searchConditions.length > 0 && accessConditions.length > 0) {
         filter.$and = [
           { $or: searchConditions },
           { $or: accessConditions }
