@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './datepicker-custom.css';
-import { Book, Remark } from '../types';
+import { Book, Remark, User } from '../types';
 import { CalendarIcon, QuestionMarkCircleIcon } from './Icons';
 import { RemarkFormTour } from './RemarkFormTour';
 
@@ -11,6 +11,7 @@ interface AddRemarkModalProps {
   onClose: () => void;
   onAddRemark: (bookCode: string, remark: Remark) => void;
   book: Book | null;
+  user?: User | null;
 }
 
 // Calculate days between two dates (inclusive of from date)
@@ -51,7 +52,7 @@ const calculateDelays = (from: string, to: string, days: number): { depedDays: n
   return { depedDays: 0, publisherDays: 0 };
 };
 
-export const AddRemarkModal: React.FC<AddRemarkModalProps> = ({ isOpen, onClose, onAddRemark, book }) => {
+export const AddRemarkModal: React.FC<AddRemarkModalProps> = ({ isOpen, onClose, onAddRemark, book, user }) => {
   const [remarkText, setRemarkText] = useState('');
   const [remarkDate, setRemarkDate] = useState<Date | null>(new Date());
   const [remarkTime, setRemarkTime] = useState(new Date().toTimeString().slice(0, 5));

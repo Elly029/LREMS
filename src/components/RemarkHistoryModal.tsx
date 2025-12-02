@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, Remark } from '../types';
+import { Book, Remark, User } from '../types';
 import { FileDownloadIcon, EditIcon, DeleteIcon } from './Icons';
 import logo from '../assets/logo.png';
 import { EditRemarkModal } from './EditRemarkModal';
@@ -11,6 +11,7 @@ interface RemarkHistoryModalProps {
   book: Book | null;
   onDataChange: () => void;
   onAddRemark?: () => void;
+  user?: User | null;
 }
 
 
@@ -47,7 +48,7 @@ const formatDateRange = (fromDate?: string, toDate?: string) => {
   return fromDate ? formatDate(fromDate) : (toDate ? formatDate(toDate) : '-');
 };
 
-export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, onClose, book, onDataChange, onAddRemark }) => {
+export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, onClose, book, onDataChange, onAddRemark, user }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRemark, setEditingRemark] = useState<Remark | null>(null);
   const [editingRemarkId, setEditingRemarkId] = useState<string | null>(null);
@@ -665,6 +666,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
           book={book}
           remark={editingRemark}
           remarkId={editingRemarkId}
+          user={user}
         />
       )}
     </>

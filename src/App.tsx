@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Book, SortConfig, Remark, Status } from './types';
+import { Book, SortConfig, Remark, Status, User } from './types';
 import { DataTable } from './components/DataTable';
 import { BookFormModal } from './components/BookFormModal';
 import { AddRemarkModal } from './components/AddRemarkModal';
@@ -31,20 +31,7 @@ import StatusChart from './components/StatusChart';
 import { Spinner } from './components/ui/Spinner';
 import { TableSkeleton } from './components/ui/Skeleton';
 
-interface AccessRule {
-  learning_areas: string[];
-  grade_levels: number[];
-}
 
-interface User {
-  _id: string;
-  username: string;
-  name: string;
-  token: string;
-  access_rules?: AccessRule[];
-  is_admin_access?: boolean;
-  evaluator_id?: string;
-}
 
 const App: React.FC = () => {
   // Authentication state
@@ -180,6 +167,63 @@ const App: React.FC = () => {
       fetchBooks();
     }
   }, [user, currentView, dataVersion, fetchBooks]);
+
+  useEffect(() => {
+    if (user) {
+      const uid = user._id;
+      try {
+        const savedFilters = sessionStorage.getItem(nsKey(uid, 'bookFilters')) || sessionStorage.getItem('bookFilters');
+        const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
+        setFilters(parsedFilters);
+        if (sessionStorage.getItem('bookFilters')) migrateLegacyKey(sessionStorage, 'bookFilters', uid);
+      } catch {
+        setFilters({});
+      }
+      try {
+        const savedSort = sessionStorage.getItem(nsKey(uid, 'bookSort')) || sessionStorage.getItem('bookSort');
+        const parsedSort = savedSort ? JSON.parse(savedSort) : { key: 'bookCode', direction: 'ascending' };
+        setSortConfig(parsedSort);
+        if (sessionStorage.getItem('bookSort')) migrateLegacyKey(sessionStorage, 'bookSort', uid);
+      } catch {
+        setSortConfig({ key: 'bookCode', direction: 'ascending' });
+      }
+      try {
+        const savedSearch = sessionStorage.getItem(nsKey(uid, 'bookSearch')) || sessionStorage.getItem('bookSearch');
+        setSearchTerm(savedSearch || '');
+        if (sessionStorage.getItem('bookSearch')) migrateLegacyKey(sessionStorage, 'bookSearch', uid);
+      } catch {
+        setSearchTerm('');
+      }
+    } else {
+      setFilters({});
+      setSortConfig({ key: 'bookCode', direction: 'ascending' });
+      setSearchTerm('');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookFilters'), JSON.stringify(filters));
+      } catch { }
+    }
+  }, [user, filters]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookSort'), JSON.stringify(sortConfig));
+      } catch { }
+    }
+  }, [user, sortConfig]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookSearch'), searchTerm);
+      } catch { }
+    }
+  }, [user, searchTerm]);
 
   const handleOpenAddModal = () => {
     setEditingBook(null);
@@ -870,12 +914,14 @@ const App: React.FC = () => {
         book={selectedBookForRemarks}
         onDataChange={fetchBooks}
         onAddRemark={() => selectedBookForRemarks && handleOpenAddRemarkModal(selectedBookForRemarks)}
+        user={user}
       />
       <AddRemarkModal
         isOpen={isAddRemarkModalOpen}
         onClose={() => setIsAddRemarkModalOpen(false)}
         book={bookForNewRemark}
         onAddRemark={handleAddRemark}
+        user={user}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordModalOpen}
@@ -920,59 +966,4 @@ const App: React.FC = () => {
 };
 
 export default App;
-  useEffect(() => {
-    if (user) {
-      const uid = user._id;
-      try {
-        const savedFilters = sessionStorage.getItem(nsKey(uid, 'bookFilters')) || sessionStorage.getItem('bookFilters');
-        const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
-        setFilters(parsedFilters);
-        if (sessionStorage.getItem('bookFilters')) migrateLegacyKey(sessionStorage, 'bookFilters', uid);
-      } catch {
-        setFilters({});
-      }
-      try {
-        const savedSort = sessionStorage.getItem(nsKey(uid, 'bookSort')) || sessionStorage.getItem('bookSort');
-        const parsedSort = savedSort ? JSON.parse(savedSort) : { key: 'bookCode', direction: 'ascending' };
-        setSortConfig(parsedSort);
-        if (sessionStorage.getItem('bookSort')) migrateLegacyKey(sessionStorage, 'bookSort', uid);
-      } catch {
-        setSortConfig({ key: 'bookCode', direction: 'ascending' });
-      }
-      try {
-        const savedSearch = sessionStorage.getItem(nsKey(uid, 'bookSearch')) || sessionStorage.getItem('bookSearch');
-        setSearchTerm(savedSearch || '');
-        if (sessionStorage.getItem('bookSearch')) migrateLegacyKey(sessionStorage, 'bookSearch', uid);
-      } catch {
-        setSearchTerm('');
-      }
-    } else {
-      setFilters({});
-      setSortConfig({ key: 'bookCode', direction: 'ascending' });
-      setSearchTerm('');
-    }
-  }, [user]);
 
-  useEffect(() => {
-    if (user) {
-      try {
-        sessionStorage.setItem(nsKey(user._id, 'bookFilters'), JSON.stringify(filters));
-      } catch {}
-    }
-  }, [user, filters]);
-
-  useEffect(() => {
-    if (user) {
-      try {
-        sessionStorage.setItem(nsKey(user._id, 'bookSort'), JSON.stringify(sortConfig));
-      } catch {}
-    }
-  }, [user, sortConfig]);
-
-  useEffect(() => {
-    if (user) {
-      try {
-        sessionStorage.setItem(nsKey(user._id, 'bookSearch'), searchTerm);
-      } catch {}
-    }
-  }, [user, searchTerm]);

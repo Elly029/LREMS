@@ -102,3 +102,19 @@ export interface DashboardStats {
   totalAssignments: number;
   averageCompletionRate: number;
 }
+
+export interface AccessRule {
+  learning_areas: string[];
+  grade_levels: number[];
+}
+
+export interface User {
+  _id: string;
+  username: string;
+  name: string;
+  token: string;
+  access_rules?: AccessRule[];
+  is_admin_access?: boolean;
+  evaluator_id?: string;
+  role?: string;
+}

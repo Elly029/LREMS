@@ -127,7 +127,20 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
         });
         const pendingTasks = Math.max(totalAssignments - completedAssignments, 0);
         const completionPercentage = totalAssignments === 0 ? 0 : Math.round((completedAssignments / totalAssignments) * 100);
-        return { totalAssignments, completedAssignments, pendingTasks, completionPercentage };
+        return {
+            totalAssignments,
+            completedAssignments,
+            pendingTasks,
+            completionPercentage,
+            taskBreakdown: {
+                hasTxAndTm: { done: 0, pending: 0 },
+                individualUpload: { done: 0, pending: 0 },
+                teamUpload: { done: 0, pending: 0 },
+                txAndTmWithMarginalNotes: { done: 0, pending: 0 },
+                signedSummaryForm: { done: 0, pending: 0 },
+                clearance: { done: 0, pending: 0 }
+            }
+        };
     };
 
     const groupedAssignments = useMemo(() => {
