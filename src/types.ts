@@ -9,6 +9,7 @@ export enum Status {
   Returned = 'RETURNED',
   DqForReturn = 'DQ/FOR RETURN',
   InProgress = 'In Progress',
+  RTP = 'RTP',
 }
 
 export interface Remark {

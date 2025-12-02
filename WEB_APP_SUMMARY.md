@@ -97,6 +97,7 @@ Books can have the following statuses:
 - RETURNED
 - DQ/FOR RETURN
 - In Progress
+- RTP
 
 ### 3. Remarks System
 - **Timestamped Notes**: Add remarks to any book

@@ -15,4 +15,5 @@ export const STATUS_STYLES: Record<Status, string> = {
   [Status.Returned]: 'bg-gray-100 text-gray-700 border border-gray-200',
   [Status.DqForReturn]: 'bg-slate-100 text-slate-700 border border-slate-200',
   [Status.InProgress]: 'bg-sky-50 text-sky-700 border border-sky-200',
+  [Status.RTP]: 'bg-lime-50 text-lime-700 border border-lime-200',
 };

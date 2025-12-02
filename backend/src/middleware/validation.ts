@@ -20,7 +20,8 @@ export const bookSchemas = {
       'NOT FOUND',
       'RETURNED',
       'DQ/FOR RETURN',
-      'In Progress'
+      'In Progress',
+      'RTP'
     ).required(),
     isNew: Joi.boolean(),
     ntpDate: Joi.date().iso().allow(null, '').optional(),
@@ -43,7 +44,8 @@ export const bookSchemas = {
       'NOT FOUND',
       'RETURNED',
       'DQ/FOR RETURN',
-      'In Progress'
+      'In Progress',
+      'RTP'
     ),
     isNew: Joi.boolean(),
     ntpDate: Joi.date().iso().allow(null, '').optional(),

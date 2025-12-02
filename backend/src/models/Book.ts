@@ -59,7 +59,8 @@ const BookSchema: Schema = new Schema(
         'NOT FOUND',
         'RETURNED',
         'DQ/FOR RETURN',
-        'In Progress'
+        'In Progress',
+        'RTP'
       ],
       default: 'For Evaluation',
     },

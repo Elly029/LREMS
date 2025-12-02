@@ -49,6 +49,7 @@ const StatusChart: React.FC = () => {
         'RETURNED': '#EC4899', // Pink
         'DQ/FOR RETURN': '#DC2626', // Dark Red
         'In Progress': '#3B82F6', // Blue
+        'RTP': '#A3E635', // Lime
     };
 
     useEffect(() => {

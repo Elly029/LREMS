@@ -142,6 +142,7 @@ Create a new book entry.
 - "NOT FOUND"
 - "RETURNED"
 - "In Progress"
+ - "RTP"
 
 ## Database Schema
 

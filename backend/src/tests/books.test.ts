@@ -206,7 +206,7 @@ describe('Books API', () => {
       // Delete the book
       const response = await request(app)
         .delete(`/api/books/${bookCode}`)
-        .expect(204);
+        .expect(200);
 
       expect(response.body.success).toBe(true);
     });

@@ -27,7 +27,8 @@ CREATE TABLE books (
         'For Signing off',
         'NOT FOUND',
         'RETURNED',
-        'In Progress'
+        'In Progress',
+        'RTP'
     ))
 );
 
