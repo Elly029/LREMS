@@ -518,6 +518,7 @@ export class BookService {
     user?: IUser
   ): Promise<any> {
     try {
+      // Validate that the book exists before adding a remark
       const book = await BookModel.findOne({ book_code: bookCode });
       if (!book) {
         throw new NotFoundError(`Book with code ${bookCode} not found`);
@@ -572,6 +573,7 @@ export class BookService {
     user?: IUser
   ): Promise<any> {
     try {
+      // Validate that the book exists before updating a remark
       const book = await BookModel.findOne({ book_code: bookCode });
       if (!book) {
         throw new NotFoundError(`Book with code ${bookCode} not found`);
@@ -619,6 +621,7 @@ export class BookService {
 
   async deleteRemark(bookCode: string, remarkId: string, user?: IUser): Promise<void> {
     try {
+      // Validate that the book exists before deleting a remark
       const book = await BookModel.findOne({ book_code: bookCode });
       if (!book) {
         throw new NotFoundError(`Book with code ${bookCode} not found`);

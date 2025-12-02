@@ -15,7 +15,9 @@
     "extract-excel": "ts-node scripts/extract-excel-data.js",
     "upload-evaluators": "ts-node -r tsconfig-paths/register src/scripts/uploadEvaluators.ts",
     "migrate:ntp-date": "ts-node -r tsconfig-paths/register src/scripts/add_ntp_date_field.ts",
-    "verify:ntp-date": "ts-node -r tsconfig-paths/register src/scripts/verify_ntp_date_field.ts"
+    "verify:ntp-date": "ts-node -r tsconfig-paths/register src/scripts/verify_ntp_date_field.ts",
+    "cleanup:orphaned": "ts-node -r tsconfig-paths/register cleanup_orphaned_remarks.ts",
+    "maintain:data": "ts-node -r tsconfig-paths/register maintain_data_consistency.ts"
   },
   "keywords": [
     "book",

@@ -184,7 +184,7 @@ const App: React.FC = () => {
   const [bookForNewRemark, setBookForNewRemark] = useState<Book | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 1000); // Increased from 300ms to 1000ms
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Reduced from 1000ms to 300ms for better responsiveness
 
   const [isFiltering, setIsFiltering] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -223,21 +223,21 @@ const App: React.FC = () => {
 
   // Fetch books on mount and when dataVersion changes
   useEffect(() => {
-    if (user && currentView === 'inventory') {
+    if (user) {
       fetchBooks();
     }
-  }, [user, currentView, dataVersion, fetchBooks]);
+  }, [user, dataVersion, fetchBooks]);
 
-  // Auto-refresh data every 30 seconds when on inventory view
+  // Auto-refresh data every 30 seconds
   useEffect(() => {
-    if (!user || currentView !== 'inventory') return;
+    if (!user) return;
 
     const intervalId = setInterval(() => {
       fetchBooks(false); // Silent refresh without loading indicator
     }, 30000); // 30 seconds
 
     return () => clearInterval(intervalId);
-  }, [user, currentView, fetchBooks]);
+  }, [user, fetchBooks]);
 
   useEffect(() => {
     if (user) {
@@ -667,6 +667,20 @@ const App: React.FC = () => {
     on('monitoring:changed', handleMonitoringChange as any);
     return () => off('monitoring:changed', handleMonitoringChange as any);
   }, [user, currentView]);
+
+  // Listen for book changes to refresh data immediately
+  useEffect(() => {
+    const handleBooksChanged = () => {
+      // Refresh data regardless of current view to ensure consistency
+      // Use a slight delay to ensure backend has processed the change
+      setTimeout(() => {
+        fetchBooks(false); // Silent refresh without loading indicator
+      }, 100);
+    };
+
+    on('books:changed', handleBooksChanged as any);
+    return () => off('books:changed', handleBooksChanged as any);
+  }, [fetchBooks]);
 
   const filteredMonitoringData = useMemo(() => {
     if (!user) return [];

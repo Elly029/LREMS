@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Book, Remark, User } from '../types';
 import { FileDownloadIcon, EditIcon, DeleteIcon } from './Icons';
 import logo from '../assets/logo.png';
 import { EditRemarkModal } from './EditRemarkModal';
 import { bookApi } from '../services/bookService';
+import { on, off } from '../events';
+import { Toast } from './Toast';
 
 interface RemarkHistoryModalProps {
   isOpen: boolean;
@@ -52,6 +54,18 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRemark, setEditingRemark] = useState<Remark | null>(null);
   const [editingRemarkId, setEditingRemarkId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Listen for book changes to refresh remark data
+  useEffect(() => {
+    const handleBooksChanged = () => {
+      // Refresh the data when books change
+      onDataChange();
+    };
+
+    on('books:changed', handleBooksChanged as any);
+    return () => off('books:changed', handleBooksChanged as any);
+  }, [onDataChange]);
 
   if (!isOpen || !book) return null;
 
@@ -431,7 +445,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       await bookApi.deleteRemark(book.bookCode, id);
 
       // Show success message
-      alert('Remark deleted successfully!');
+      setToast({ message: 'Remark deleted successfully!', type: 'success' });
 
       // Refresh the book data
       if (onDataChange) {
@@ -442,19 +456,29 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       const status = error?.status;
       const code = error?.code;
       if (status === 404 || code === 'NOT_FOUND') {
-        alert('Remark not found. It may have been deleted already.');
+        // Even though it's a 404, we still want to refresh the UI to remove the deleted remark
+        if (onDataChange) {
+          onDataChange();
+        }
+        // Show a friendly message to the user
+        setToast({ message: 'Remark was already deleted. The display has been updated.', type: 'success' });
       } else if (status === 400 || code === 'VALIDATION_ERROR') {
-        alert('Invalid remark ID format.');
+        setToast({ message: 'Invalid remark ID format.', type: 'error' });
       } else if (status === 403 || code === 'FORBIDDEN') {
-        alert('You do not have permission to delete this remark.');
+        setToast({ message: 'You do not have permission to delete this remark.', type: 'error' });
       } else {
-        alert('Failed to delete remark. Please try again.');
+        setToast({ message: 'Failed to delete remark. Please try again.', type: 'error' });
       }
     }
   };
 
   return (
     <>
+      <Toast 
+        message={toast?.message || null} 
+        type={toast?.type || null} 
+        onClose={() => setToast(null)} 
+      />
       <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all" onClick={e => e.stopPropagation()}>
           <h2 className="text-3xl font-bold text-gray-900">CHRONOLOGICAL PROCESS ON QUALITY ASSURANCE</h2>

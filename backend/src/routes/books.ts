@@ -23,7 +23,7 @@ router.get('/', protect, validateBooksQuery, async (req: Request, res: Response)
     const etag = 'W/"' + Buffer.from(payload).toString('base64').slice(0, 32) + '"';
     const ifNoneMatch = req.headers['if-none-match'];
 
-    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
     res.setHeader('ETag', etag);
 
     if (ifNoneMatch && ifNoneMatch === etag) {
@@ -60,7 +60,7 @@ router.get('/:bookCode', protect, async (req: Request, res: Response) => {
     const etag = 'W/"' + Buffer.from(payload).toString('base64').slice(0, 32) + '"';
     const ifNoneMatch = req.headers['if-none-match'];
 
-    res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
     res.setHeader('ETag', etag);
 
     if (ifNoneMatch && ifNoneMatch === etag) {
