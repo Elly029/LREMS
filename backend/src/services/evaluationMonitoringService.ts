@@ -10,6 +10,8 @@ export class EvaluationMonitoringService {
   private isAdmin(user: IUser): boolean {
     if (!user) return false;
     if (!user.access_rules) return false;
+    const username = (user.username || '').toLowerCase();
+    if (username === 'jc' || username === 'nonie') return false;
     return user.access_rules.some(rule =>
       rule.learning_areas.includes('*') &&
       (!rule.grade_levels || rule.grade_levels.length === 0)
@@ -24,7 +26,10 @@ export class EvaluationMonitoringService {
     }
 
     for (const rule of user.access_rules) {
-      const areaMatch = rule.learning_areas.includes('*') || rule.learning_areas.includes(learningArea);
+      const allowedScienceUsers = ['leo', 'test-user'];
+      const username = (user.username || '').toLowerCase();
+      const areaMatchRaw = rule.learning_areas.includes('*') || rule.learning_areas.includes(learningArea);
+      const areaMatch = learningArea === 'Science' ? areaMatchRaw && allowedScienceUsers.includes(username) : areaMatchRaw;
       if (areaMatch) return true;
     }
     return false;
@@ -40,19 +45,26 @@ export class EvaluationMonitoringService {
         const isSuperAdmin = this.isAdmin(user);
 
         if (!isSuperAdmin) {
+          const allowedScienceUsers = ['leo', 'test-user'];
+          const username = (user.username || '').toLowerCase();
+
           const learningAreas: string[] = [];
           user.access_rules.forEach(rule => {
             if (rule.learning_areas.includes('*')) {
-              // User has access to all areas
               return;
             }
-            learningAreas.push(...rule.learning_areas);
+            const areas = rule.learning_areas.filter(a => a !== 'Science' || allowedScienceUsers.includes(username));
+            learningAreas.push(...areas);
           });
 
           if (learningAreas.length > 0) {
             filter.learning_area = { $in: learningAreas };
           }
         }
+      }
+
+      if (user && (!user.access_rules || user.access_rules.length === 0) && !this.isAdmin(user)) {
+        filter.created_by = user.username;
       }
 
       let monitoringEntries = await EvaluationMonitoringModel.find(filter)
@@ -95,6 +107,9 @@ export class EvaluationMonitoringService {
 
       // Check access
       if (user && !this.isAdmin(user) && !this.validateAccess(user, entry.learning_area)) {
+        if (entry.learning_area === 'Science') {
+          logger.warn(`Unauthorized Science monitoring view attempt by ${user.username}`);
+        }
         throw new ForbiddenError('You do not have permission to view this monitoring entry');
       }
 

@@ -31,6 +31,8 @@ export class BookService {
   private isAdmin(user: IUser): boolean {
     if (!user) return false;
     if (!user.access_rules) return false;
+    const username = (user.username || '').toLowerCase();
+    if (username === 'jc' || username === 'nonie') return false;
     return user.access_rules.some(rule =>
       rule.learning_areas.includes('*') &&
       (!rule.grade_levels || rule.grade_levels.length === 0)
@@ -44,9 +46,17 @@ export class BookService {
       return false;
     }
 
+    const allowedScienceUsers = ['leo', 'test-user'];
+    const limitedGradesUsers: { [key: string]: number[] } = { jc: [1, 3], nonie: [1, 3] };
+    const username = (user.username || '').toLowerCase();
+
     for (const rule of user.access_rules) {
-      const areaMatch = rule.learning_areas.includes('*') || rule.learning_areas.includes(learningArea);
-      const gradeMatch = !rule.grade_levels || rule.grade_levels.length === 0 || rule.grade_levels.includes(gradeLevel);
+      const areaMatchRaw = rule.learning_areas.includes('*') || rule.learning_areas.includes(learningArea);
+      const areaMatch = learningArea === 'Science' ? areaMatchRaw && allowedScienceUsers.includes(username) : areaMatchRaw;
+
+      const limitedGrades = limitedGradesUsers[username];
+      const gradeMatchRaw = !rule.grade_levels || rule.grade_levels.length === 0 || rule.grade_levels.includes(gradeLevel);
+      const gradeMatch = limitedGrades ? limitedGrades.includes(gradeLevel) : gradeMatchRaw;
 
       if (areaMatch && gradeMatch) return true;
     }
@@ -83,6 +93,13 @@ export class BookService {
       // Build filter query
       const filter: any = {};
 
+      const usernameLower = (user?.username || '').toLowerCase();
+      const allowedScienceUsersView = ['leo', 'test-user'];
+      const requestedAreas = learningArea ? (Array.isArray(learningArea) ? learningArea : [learningArea]) : [];
+      if (requestedAreas.includes('Science') && user && !this.isAdmin(user) && !allowedScienceUsersView.includes(usernameLower)) {
+        logger.warn(`Unauthorized Science data view attempt by ${user.username}`);
+      }
+
       // Search conditions
       let searchConditions: any[] = [];
       if (search) {
@@ -101,14 +118,29 @@ export class BookService {
         const canBypassRestrictions = isSuperAdmin || (isAdminView && user.is_admin_access);
 
         if (!canBypassRestrictions) {
+          const allowedScienceUsers = ['leo', 'test-user'];
+          const limitGradesForUsers: { [key: string]: number[] } = { jc: [1, 3], nonie: [1, 3] };
+
+          const username = (user.username || '').toLowerCase();
+
           const ruleConditions = user.access_rules.map(rule => {
             const condition: any = {};
 
             if (!rule.learning_areas.includes('*')) {
-              condition.learning_area = { $in: rule.learning_areas };
+              let areas = [...rule.learning_areas];
+              if (!allowedScienceUsers.includes(username)) {
+                areas = areas.filter(a => a !== 'Science');
+              }
+              if (areas.length > 0) {
+                condition.learning_area = { $in: areas };
+              } else {
+                condition.learning_area = { $in: [] };
+              }
             }
 
-            if (rule.grade_levels && rule.grade_levels.length > 0) {
+            if (limitGradesForUsers[username]) {
+              condition.grade_level = { $in: limitGradesForUsers[username] };
+            } else if (rule.grade_levels && rule.grade_levels.length > 0) {
               condition.grade_level = { $in: rule.grade_levels };
             }
 
@@ -119,6 +151,15 @@ export class BookService {
             { $or: ruleConditions },
             { created_by: user.username }
           ];
+        } else if (user && !canBypassRestrictions) {
+          accessConditions = [{ created_by: user.username }];
+        }
+      }
+
+      if (user && (!user.access_rules || user.access_rules.length === 0)) {
+        const isAdminView = adminView === true || String(adminView) === 'true';
+        if (!isAdminView || !user.is_admin_access) {
+          accessConditions = [{ created_by: user.username }];
         }
       }
 
@@ -140,7 +181,10 @@ export class BookService {
       }
 
       if (learningArea) {
-        const areasArray = Array.isArray(learningArea) ? learningArea : [learningArea];
+        let areasArray = Array.isArray(learningArea) ? learningArea : [learningArea];
+        if (user && !this.isAdmin(user) && !allowedScienceUsersView.includes(usernameLower)) {
+          areasArray = areasArray.filter(a => a !== 'Science');
+        }
         filter.learning_area = { $in: areasArray };
       }
 
