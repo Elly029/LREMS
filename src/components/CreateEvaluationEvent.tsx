@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { Book } from '../types';
-import { SearchIcon, CalendarIcon, PlusIcon, EditIcon, DeleteIcon } from './Icons';
+import { SearchIcon, CalendarIcon, PlusIcon, EditIcon, DeleteIcon, RefreshIcon } from './Icons';
 import { apiClient } from '../services/api';
 
 interface CreateEvaluationEventProps {
@@ -28,37 +28,47 @@ export const CreateEvaluationEvent: React.FC<CreateEvaluationEventProps> = ({
     const [books, setBooks] = useState<Book[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchBooks = async () => {
-            try {
-                setIsLoading(true);
-                const response = await apiClient.get<any>('/books', {
-                    limit: 1000,
-                    adminView: true
-                });
-                
-                if (response && response.data) {
-                    // Transform backend data to frontend format
-                    const transformedBooks = response.data.map((book: any) => ({
-                        bookCode: book.book_code || book.bookCode,
-                        learningArea: book.learning_area || book.learningArea,
-                        gradeLevel: book.grade_level || book.gradeLevel,
-                        publisher: book.publisher,
-                        title: book.title,
-                        status: book.status,
-                        isNew: book.is_new !== undefined ? book.is_new : book.isNew,
-                        remarks: book.remarks || []
-                    }));
-                    setBooks(transformedBooks);
-                }
-            } catch (error) {
-                console.error('Error fetching books for admin access:', error);
-            } finally {
-                setIsLoading(false);
+    const fetchBooks = useCallback(async (showLoading = true) => {
+        try {
+            if (showLoading) setIsLoading(true);
+            const response = await apiClient.get<any>('/books', {
+                limit: 1000,
+                adminView: true
+            });
+            
+            if (response && response.data) {
+                // Transform backend data to frontend format
+                const transformedBooks = response.data.map((book: any) => ({
+                    bookCode: book.book_code || book.bookCode,
+                    learningArea: book.learning_area || book.learningArea,
+                    gradeLevel: book.grade_level || book.gradeLevel,
+                    publisher: book.publisher,
+                    title: book.title,
+                    status: book.status,
+                    isNew: book.is_new !== undefined ? book.is_new : book.isNew,
+                    remarks: book.remarks || []
+                }));
+                setBooks(transformedBooks);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching books for admin access:', error);
+        } finally {
+            if (showLoading) setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
         fetchBooks();
-    }, [dataVersion]);
+    }, [dataVersion, fetchBooks]);
+
+    // Auto-refresh data every 30 seconds
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            fetchBooks(false); // Silent refresh
+        }, 30000);
+        
+        return () => clearInterval(intervalId);
+    }, [fetchBooks]);
 
     const [eventName, setEventName] = useState('');
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
@@ -189,13 +199,23 @@ export const CreateEvaluationEvent: React.FC<CreateEvaluationEventProps> = ({
                             Manage learning resources and create evaluation events.
                         </p>
                     </div>
-                    <button
-                        onClick={onAddBook}
-                        className="flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors"
-                    >
-                        <PlusIcon className="h-5 w-5 mr-2" />
-                        Add New Book
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => fetchBooks()}
+                            disabled={isLoading}
+                            className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
+                            title="Refresh data"
+                        >
+                            <RefreshIcon className={`h-5 w-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                            onClick={onAddBook}
+                            className="flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+                        >
+                            <PlusIcon className="h-5 w-5 mr-2" />
+                            Add New Book
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">

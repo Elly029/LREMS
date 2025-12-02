@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { evaluatorService, EvaluatorProfile } from '../services/evaluatorService';
 import { evaluatorDashboardService } from '../services/evaluatorDashboardService';
 import { DashboardStats } from '../types';
-import { SearchIcon } from './Icons';
+import { SearchIcon, RefreshIcon } from './Icons';
 import { useEvaluatorDashboardTour } from './EvaluatorDashboardTour';
 import { EvaluatorDetailView } from './EvaluatorDetailView';
 import { Spinner } from './ui/Spinner';
@@ -44,12 +44,8 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
         }
     }, [startTour, onTourStart]);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        setIsLoading(true);
+    const fetchData = useCallback(async (showLoading = true) => {
+        if (showLoading) setIsLoading(true);
         setError(null);
         try {
             const [evalData, statsData] = await Promise.all([
@@ -70,9 +66,22 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
             console.error('Error fetching dashboard data:', error);
             setError(error?.message || 'Failed to load dashboard');
         } finally {
-            setIsLoading(false);
+            if (showLoading) setIsLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // Auto-refresh data every 30 seconds
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            fetchData(false); // Silent refresh
+        }, 30000);
+        
+        return () => clearInterval(intervalId);
+    }, [fetchData]);
 
     const filteredEvaluators = useMemo(() => {
         let result = evaluators;
@@ -128,11 +137,21 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
                 <Alert title="Unable to load dashboard" message={error} tone="error" actionLabel="Retry" onAction={fetchData} />
             )}
             {/* Header */}
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Evaluator Dashboard</h2>
-                <p className="text-sm text-gray-500 mt-1">
-                    View and manage evaluator assignments and progress
-                </p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Evaluator Dashboard</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        View and manage evaluator assignments and progress
+                    </p>
+                </div>
+                <button
+                    onClick={() => fetchData()}
+                    disabled={isLoading}
+                    className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
+                    title="Refresh data"
+                >
+                    <RefreshIcon className={`h-5 w-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
             </div>
 
             {/* Statistics Cards */}

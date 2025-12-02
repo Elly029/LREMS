@@ -4,7 +4,7 @@ import { Book, SortConfig, Remark, Status, User } from './types';
 import { DataTable } from './components/DataTable';
 import { BookFormModal } from './components/BookFormModal';
 import { AddRemarkModal } from './components/AddRemarkModal';
-import { PlusIcon, SearchIcon } from './components/Icons';
+import { PlusIcon, SearchIcon, RefreshIcon } from './components/Icons';
 import { useDebounce } from './hooks/useDebounce';
 import { Toast } from './components/Toast';
 import { RemarkHistoryModal } from './components/RemarkHistoryModal';
@@ -188,8 +188,8 @@ const App: React.FC = () => {
   };
 
   // Fetch books from API
-  const fetchBooks = useCallback(async () => {
-    setLoading(true);
+  const fetchBooks = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     try {
       const result = await bookApi.fetchBooks({
@@ -201,7 +201,7 @@ const App: React.FC = () => {
       console.error('Error fetching books:', err);
       setError(err.message || 'Failed to load books');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [user]);
 
@@ -211,6 +211,17 @@ const App: React.FC = () => {
       fetchBooks();
     }
   }, [user, currentView, dataVersion, fetchBooks]);
+
+  // Auto-refresh data every 30 seconds when on inventory view
+  useEffect(() => {
+    if (!user || currentView !== 'inventory') return;
+    
+    const intervalId = setInterval(() => {
+      fetchBooks(false); // Silent refresh without loading indicator
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [user, currentView, fetchBooks]);
 
   useEffect(() => {
     if (user) {
@@ -588,10 +599,10 @@ const App: React.FC = () => {
   const [isAddToMonitoringModalOpen, setIsAddToMonitoringModalOpen] = useState(false);
 
   // Fetch monitoring data
-  const fetchMonitoringData = async () => {
+  const fetchMonitoringData = useCallback(async (showLoading = true) => {
     if (!user) return;
 
-    setMonitoringLoading(true);
+    if (showLoading) setMonitoringLoading(true);
     try {
       const data = await monitoringApi.fetchAll();
       setMonitoringData(data);
@@ -599,16 +610,27 @@ const App: React.FC = () => {
       console.error('Error fetching monitoring data:', err);
       showToast('Failed to load monitoring data', 'error');
     } finally {
-      setMonitoringLoading(false);
+      if (showLoading) setMonitoringLoading(false);
     }
-  };
+  }, [user]);
 
   // Load monitoring data when user logs in or view changes to monitoring
   useEffect(() => {
     if (user && currentView === 'monitoring') {
       fetchMonitoringData();
     }
-  }, [user, currentView]);
+  }, [user, currentView, fetchMonitoringData]);
+
+  // Auto-refresh monitoring data every 30 seconds
+  useEffect(() => {
+    if (!user || currentView !== 'monitoring') return;
+    
+    const intervalId = setInterval(() => {
+      fetchMonitoringData(false); // Silent refresh
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [user, currentView, fetchMonitoringData]);
 
   // Listen for monitoring changes to refresh data
   useEffect(() => {
@@ -794,6 +816,14 @@ const App: React.FC = () => {
                   />
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
+                  <button
+                    onClick={() => fetchBooks()}
+                    disabled={loading}
+                    className="p-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
+                    title="Refresh data"
+                  >
+                    <RefreshIcon className={`h-5 w-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
                   <div id="export-buttons" className="hidden sm:block">
                     <ExportButtons books={books} />
                   </div>
@@ -863,7 +893,7 @@ const App: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load books</h3>
                   <p className="text-gray-500 mb-6 max-w-md mx-auto text-sm">{error}</p>
                   <button
-                    onClick={fetchBooks}
+                    onClick={() => fetchBooks()}
                     className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition-colors"
                   >
                     Try Again
@@ -903,15 +933,25 @@ const App: React.FC = () => {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Evaluation Monitoring</h2>
-            {user?.is_admin_access && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsAddToMonitoringModalOpen(true)}
-                className="flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+                onClick={() => fetchMonitoringData()}
+                disabled={monitoringLoading}
+                className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
+                title="Refresh data"
               >
-                <PlusIcon />
-                <span className="ml-2">Add Books to Monitoring</span>
+                <RefreshIcon className={`h-5 w-5 text-gray-600 ${monitoringLoading ? 'animate-spin' : ''}`} />
               </button>
-            )}
+              {user?.is_admin_access && (
+                <button
+                  onClick={() => setIsAddToMonitoringModalOpen(true)}
+                  className="flex items-center justify-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+                >
+                  <PlusIcon />
+                  <span className="ml-2">Add Books to Monitoring</span>
+                </button>
+              )}
+            </div>
           </div>
           {monitoringLoading ? (
             <Spinner label="Loading monitoring data..." size="md" />
