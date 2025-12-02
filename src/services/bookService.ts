@@ -1,4 +1,5 @@
 import { apiClient, ApiResponse } from './api';
+import { emit } from '../events';
 import { Book, Status, Remark } from '../types';
 
 export interface BooksResponse {
@@ -96,7 +97,9 @@ export const bookApi = {
         };
 
         const response = await apiClient.post<ApiResponse>('/books', backendData);
-        return transformBookFromBackend(response.data);
+        const created = transformBookFromBackend(response.data);
+        emit('books:changed', { type: 'create', book: created });
+        return created;
     },
 
     async updateBook(bookCode: string, bookData: {
@@ -123,11 +126,14 @@ export const bookApi = {
         if (bookData.remark) backendData.remark = bookData.remark;
 
         const response = await apiClient.put<ApiResponse>(`/books/${bookCode}`, backendData);
-        return transformBookFromBackend(response.data);
+        const updated = transformBookFromBackend(response.data);
+        emit('books:changed', { type: 'update', book: updated });
+        return updated;
     },
 
     async deleteBook(bookCode: string) {
         await apiClient.delete<ApiResponse>(`/books/${bookCode}`);
+        emit('books:changed', { type: 'delete', bookCode });
         return true;
     },
 
@@ -147,8 +153,8 @@ export const bookApi = {
 
         console.log('Sending remark data:', backendData);
         const response = await apiClient.post<ApiResponse>(`/books/${bookCode}/remarks`, backendData);
-
-        return {
+        
+        const created = {
             id: response.data._id,
             text: response.data.text,
             timestamp: response.data.timestamp,
@@ -161,6 +167,8 @@ export const bookApi = {
             daysDelayDeped: response.data.days_delay_deped,
             daysDelayPublisher: response.data.days_delay_publisher,
         };
+        emit('books:changed', { type: 'remark:create', bookCode, remark: created });
+        return created;
     },
 
     async updateRemark(bookCode: string, remarkId: string, remark: Remark) {
@@ -180,7 +188,7 @@ export const bookApi = {
         console.log('Updating remark data:', backendData);
         const response = await apiClient.put<ApiResponse>(`/books/${bookCode}/remarks/${remarkId}`, backendData);
 
-        return {
+        const updated = {
             id: response.data._id,
             text: response.data.text,
             timestamp: response.data.timestamp,
@@ -193,9 +201,12 @@ export const bookApi = {
             daysDelayDeped: response.data.days_delay_deped,
             daysDelayPublisher: response.data.days_delay_publisher,
         };
+        emit('books:changed', { type: 'remark:update', bookCode, remarkId, remark: updated });
+        return updated;
     },
 
     async deleteRemark(bookCode: string, remarkId: string) {
         await apiClient.delete(`/books/${bookCode}/remarks/${remarkId}`);
+        emit('books:changed', { type: 'remark:delete', bookCode, remarkId });
     },
 };

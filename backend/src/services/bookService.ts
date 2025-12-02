@@ -382,6 +382,7 @@ export class BookService {
       }
 
       if (Object.keys(updateFields).length > 0) {
+        const statusChanged = updateFields.status !== undefined && updateFields.status !== existingBook.status;
         await BookModel.updateOne({ book_code: bookCode }, updateFields);
 
         // If bookCode changed, update remarks
@@ -400,6 +401,9 @@ export class BookService {
       }
 
       logger.info(`Book updated successfully: ${bookCode} -> ${newBookCode}`);
+      if (updateFields.status !== undefined) {
+        logger.info(`Status changed: ${existingBook.status} -> ${updateFields.status} for ${newBookCode}`);
+      }
       cache.invalidateNamespace('books:list');
       return await this.getBookByCode(newBookCode);
     } catch (error) {

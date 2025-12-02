@@ -3,6 +3,7 @@ import { bookApi } from '../services/bookService';
 import { Book, Status } from '../types';
 import * as XLSX from 'xlsx';
 import '../components/StatusChart.css';
+import { on, off } from '../events';
 
 interface StatusData {
     learningArea: string;
@@ -54,6 +55,20 @@ const StatusChart: React.FC = () => {
 
     useEffect(() => {
         fetchData();
+        const handler = () => {
+            console.debug('books:changed received, refreshing analytics');
+            fetchData();
+        };
+        on('books:changed', handler as any);
+        const intervalMs = Number(import.meta.env.VITE_ANALYTICS_REFRESH_MS || 30000);
+        const timer = setInterval(() => {
+            console.debug('analytics polling refresh');
+            fetchData();
+        }, intervalMs);
+        return () => {
+            off('books:changed', handler as any);
+            clearInterval(timer);
+        };
     }, []);
 
     const fetchData = async () => {
