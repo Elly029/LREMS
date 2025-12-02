@@ -115,7 +115,11 @@ export const bookApi = {
     }) {
         const backendData: any = {};
 
-        if (bookData.bookCode) backendData.bookCode = bookData.bookCode;
+        // Only include bookCode if it's actually being changed
+        if (bookData.bookCode && bookData.bookCode !== bookCode) {
+            backendData.bookCode = bookData.bookCode;
+        }
+
         if (bookData.learningArea) backendData.learningArea = bookData.learningArea;
         if (bookData.gradeLevel !== undefined) backendData.gradeLevel = bookData.gradeLevel;
         if (bookData.publisher) backendData.publisher = bookData.publisher;
