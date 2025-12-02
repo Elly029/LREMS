@@ -15,7 +15,16 @@ import { EvaluatorsList } from './components/EvaluatorsList';
 import { ExportButtons } from './components/ExportButtons';
 import { LoginPage } from './components/LoginPage';
 import { apiClient } from './services/api';
-import { clearAllPersistence, nsKey, validateStorageIsolation, setCurrentUserId, migrateLegacyKey } from './utils/persistence';
+import { 
+  clearAllPersistence, 
+  nsKey, 
+  validateStorageIsolation, 
+  setCurrentUserId, 
+  migrateLegacyKey,
+  setIsFirstLogin,
+  createUserSession,
+  hasExistingSession
+} from './utils/persistence';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { MonitoringTable } from './components/MonitoringTable';
 import { on, off } from './events';
@@ -56,6 +65,17 @@ const App: React.FC = () => {
         apiClient.setToken(parsedUser.token);
         setCurrentUserId(parsedUser._id);
         validateStorageIsolation(parsedUser._id);
+        
+        // Check if this is a page refresh (session exists) or fresh browser open
+        // If session exists, this is a refresh - don't trigger first login behaviors
+        const sessionExists = hasExistingSession(parsedUser._id);
+        if (!sessionExists) {
+          // Fresh browser open with stored credentials - create session but not first login
+          createUserSession(parsedUser._id);
+        }
+        // Mark as NOT first login since we're restoring from storage
+        setIsFirstLogin(false);
+        
         if (parsedUser.evaluator_id && !parsedUser.is_admin_access) {
           setCurrentView('evaluator-dashboard');
         }
@@ -70,12 +90,21 @@ const App: React.FC = () => {
   const handleLogin = async (username: string, password: string) => {
     try {
       const response = await apiClient.post<User>('/auth/login', { username, password });
+      
+      // Clear all previous user's data to ensure complete isolation
       await clearAllPersistence();
+      
+      // Set up new user session
       setUser(response);
       apiClient.setToken(response.token);
       localStorage.setItem('user', JSON.stringify(response));
       setCurrentUserId(response._id);
       validateStorageIsolation(response._id);
+      
+      // Create a new session for this user and mark as first login
+      // This enables tour to show for new accounts
+      createUserSession(response._id);
+      setIsFirstLogin(true);
 
       // Redirect to Evaluator Dashboard if user is an evaluator and not admin
       if (response.evaluator_id && !response.is_admin_access) {
@@ -108,10 +137,24 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    // Clear all user data and session state
     setUser(null);
     apiClient.setToken(null);
     setCurrentUserId(null);
+    setIsFirstLogin(false);
+    
+    // Reset view to default
+    setCurrentView('inventory');
+    
+    // Clear all persisted data to ensure complete isolation between accounts
     await clearAllPersistence();
+    
+    // Clear in-memory data states
+    setBooks([]);
+    setMonitoringData([]);
+    setFilters({});
+    setSortConfig({ key: 'bookCode', direction: 'ascending' });
+    setSearchTerm('');
   };
 
   // Data state

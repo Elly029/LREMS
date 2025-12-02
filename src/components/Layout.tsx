@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import { TourGuide } from './TourGuide';
 import { SkipNavLink } from './SkipNavLink';
+import { 
+    hasTourBeenCompleted, 
+    markTourCompleted, 
+    getIsFirstLogin,
+    isFirstEverLogin,
+    markFirstLoginCompleted
+} from '../utils/persistence';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -18,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isTourActive, setIsTourActive] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const tourTriggeredRef = useRef(false);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -31,25 +39,55 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Auto-start tour only on first ever login for new accounts
+    // Tour will NOT auto-start on page refresh or subsequent logins
     useEffect(() => {
-        const key = user ? `${'bdms'}:${user._id}:hasSeenTour` : null;
-        const hasSeenTour = key ? localStorage.getItem(key) : null;
-        if (!hasSeenTour && user) {
+        if (!user || tourTriggeredRef.current) return;
+        
+        const userId = user._id;
+        const tourCompleted = hasTourBeenCompleted(userId);
+        const isFirstLogin = getIsFirstLogin();
+        const isFirstEver = isFirstEverLogin(userId);
+        
+        // Only auto-start tour if:
+        // 1. This is a fresh login (not page refresh)
+        // 2. This is the user's first ever login
+        // 3. Tour hasn't been completed before
+        if (isFirstLogin && isFirstEver && !tourCompleted) {
+            tourTriggeredRef.current = true;
             const timer = setTimeout(() => {
                 setIsTourActive(true);
+                // Mark first login as completed after showing tour
+                markFirstLoginCompleted(userId);
             }, 1500);
             return () => clearTimeout(timer);
         }
     }, [user]);
 
+    // Handle tour completion
+    const handleTourEnd = () => {
+        setIsTourActive(false);
+        if (user) {
+            markTourCompleted(user._id);
+        }
+    };
+
+    // Manual tour start handler
+    const handleManualTourStart = () => {
+        setIsDropdownOpen(false);
+        if (currentView === 'evaluator-dashboard' && onStartEvaluatorTour) {
+            onStartEvaluatorTour();
+        } else {
+            onViewChange('inventory');
+            setIsTourActive(true);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
             <TourGuide
                 startTour={isTourActive}
-                onTourEnd={() => {
-                    setIsTourActive(false);
-                    if (user) localStorage.setItem(`${'bdms'}:${user._id}:hasSeenTour`, 'true');
-                }}
+                onTourEnd={handleTourEnd}
             />
 
             {/* Top Navigation Bar */}
@@ -94,16 +132,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                                     <div className="text-xs text-gray-500">@{user.username}</div>
                                                 </div>
                                                 <button
-                                                    onClick={() => {
-                                                        setIsDropdownOpen(false);
-                                                        // Context-aware tour start
-                                                        if (currentView === 'evaluator-dashboard' && onStartEvaluatorTour) {
-                                                            onStartEvaluatorTour();
-                                                        } else {
-                                                            onViewChange('inventory');
-                                                            setIsTourActive(true);
-                                                        }
-                                                    }}
+                                                    onClick={handleManualTourStart}
                                                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                                     role="menuitem"
                                                 >

@@ -1,10 +1,16 @@
-import { useEffect } from 'react';
-import { nsKey } from '../utils/persistence';
+import { useEffect, useRef } from 'react';
+import { 
+    hasEvaluatorTourBeenCompleted, 
+    markEvaluatorTourCompleted,
+    getIsFirstLogin,
+    isFirstEverLogin
+} from '../utils/persistence';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './EvaluatorDashboardTour.css';
 
 interface User {
+    _id?: string;
     name: string;
     username: string;
     is_admin_access?: boolean;
@@ -17,6 +23,8 @@ interface EvaluatorDashboardTourProps {
 }
 
 export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboardTourProps) => {
+    const tourTriggeredRef = useRef(false);
+    
     const startTour = () => {
         const isAdmin = user?.is_admin_access;
         const isEvaluator = user?.evaluator_id && !isAdmin;
@@ -86,12 +94,9 @@ export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboa
                 }
             ],
             onDestroyed: () => {
-                const keyUserId = user?.username ? undefined : undefined;
-                const uid = (user as any)?._id as string | undefined;
+                const uid = user?._id;
                 if (uid) {
-                    localStorage.setItem(nsKey(uid, 'evaluatorDashboardTourCompleted'), 'true');
-                } else {
-                    localStorage.setItem('evaluatorDashboardTourCompleted', 'true');
+                    markEvaluatorTourCompleted(uid);
                 }
                 if (onComplete) {
                     onComplete();
@@ -102,16 +107,29 @@ export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboa
         driverObj.drive();
     };
 
+    // Auto-start tour only on first ever login for evaluator accounts
+    // Tour will NOT auto-start on page refresh or subsequent logins
     useEffect(() => {
-        // Check if tour has been completed before
-        const uid = (user as any)?._id as string | undefined;
-        const tourCompleted = uid ? localStorage.getItem(nsKey(uid, 'evaluatorDashboardTourCompleted')) : localStorage.getItem('evaluatorDashboardTourCompleted');
-
-        // Auto-start tour if not completed (optional - can be disabled)
-        // if (!tourCompleted) {
-        //     setTimeout(startTour, 500);
-        // }
-    }, []);
+        if (!user?._id || tourTriggeredRef.current) return;
+        
+        const userId = user._id;
+        const tourCompleted = hasEvaluatorTourBeenCompleted(userId);
+        const isFirstLogin = getIsFirstLogin();
+        const isFirstEver = isFirstEverLogin(userId);
+        
+        // Only auto-start evaluator tour if:
+        // 1. User is an evaluator (not admin)
+        // 2. This is a fresh login (not page refresh)
+        // 3. This is the user's first ever login
+        // 4. Tour hasn't been completed before
+        if (user.evaluator_id && !user.is_admin_access && isFirstLogin && isFirstEver && !tourCompleted) {
+            tourTriggeredRef.current = true;
+            const timer = setTimeout(() => {
+                startTour();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [user]);
 
     return { startTour };
 };
