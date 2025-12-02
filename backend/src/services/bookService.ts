@@ -31,7 +31,7 @@ export class BookService {
   private isAdmin(user: IUser): boolean {
     const username = (user?.username || '').toLowerCase();
     if (username === 'jc' || username === 'nonie') return false;
-    return Boolean(user?.is_admin_access);
+    return user?.role === 'Administrator' || Boolean(user?.is_admin_access);
   }
 
   // Validate user access
@@ -117,7 +117,7 @@ export class BookService {
       if (user && user.access_rules && user.access_rules.length > 0) {
         const isSuperAdmin = this.isAdmin(user);
         const isAdminView = adminView === true || String(adminView) === 'true';
-        const canBypassRestrictions = isSuperAdmin || (isAdminView && user.is_admin_access);
+        const canBypassRestrictions = isSuperAdmin || (isAdminView && (user.role === 'Administrator' || user.is_admin_access));
 
         if (!canBypassRestrictions) {
           const allowedScienceUsers = ['leo', 'jc', 'nonie', 'test-user'];
@@ -163,7 +163,7 @@ export class BookService {
 
       if (user && (!user.access_rules || user.access_rules.length === 0)) {
         const isAdminView = adminView === true || String(adminView) === 'true';
-        if (!isAdminView || !user.is_admin_access) {
+        if (!isAdminView || !(user.role === 'Administrator' || user.is_admin_access)) {
           const gradeLimit = gradeOverrides[usernameLower];
 
           // No access rules - only show their own created items

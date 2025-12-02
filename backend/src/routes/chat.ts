@@ -16,8 +16,8 @@ const generateDirectConversationId = (userId1: string, userId2: string): string 
 
 // Helper to determine user role
 const getUserRole = (user: any): 'admin' | 'evaluator' | 'user' => {
-    if (user.is_admin_access) return 'admin';
-    if (user.evaluator_id) return 'evaluator';
+    if (user.role === 'Administrator' || user.is_admin_access) return 'admin';
+    if (user.role === 'Evaluator' || user.evaluator_id) return 'evaluator';
     return 'user';
 };
 
@@ -197,7 +197,7 @@ router.post('/broadcast', protect, async (req: Request, res: Response) => {
     try {
         const sender = req.user;
 
-        if (!sender?.is_admin_access) {
+        if (sender?.role !== 'Administrator' && !sender?.is_admin_access) {
             return res.status(403).json({ message: 'Admin access required' });
         }
 
@@ -210,9 +210,9 @@ router.post('/broadcast', protect, async (req: Request, res: Response) => {
         // Find target users
         let targetQuery: any = {};
         if (target_role === 'evaluators') {
-            targetQuery.evaluator_id = { $ne: null };
+            targetQuery.$or = [{ role: 'Evaluator' }, { evaluator_id: { $ne: null } }];
         } else if (target_role === 'admins') {
-            targetQuery.is_admin_access = true;
+            targetQuery.$or = [{ role: 'Administrator' }, { is_admin_access: true }];
         }
         // 'all' means no filter
 
@@ -286,7 +286,7 @@ router.get('/users', protect, async (req: Request, res: Response) => {
 
         const usersWithRole = users.map(user => ({
             ...user,
-            role: user.is_admin_access ? 'admin' : (user.evaluator_id ? 'evaluator' : 'user')
+            role: (user as any).role === 'Administrator' || user.is_admin_access ? 'admin' : ((user as any).role === 'Evaluator' || user.evaluator_id ? 'evaluator' : 'user')
         }));
 
         res.json(usersWithRole);

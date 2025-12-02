@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { 
-    hasEvaluatorTourBeenCompleted, 
+import {
+    hasEvaluatorTourBeenCompleted,
     markEvaluatorTourCompleted,
     getIsFirstLogin,
     isFirstEverLogin
@@ -13,6 +13,7 @@ interface User {
     _id?: string;
     name: string;
     username: string;
+    role?: 'Administrator' | 'Facilitator' | 'Evaluator';
     is_admin_access?: boolean;
     evaluator_id?: string;
 }
@@ -24,10 +25,10 @@ interface EvaluatorDashboardTourProps {
 
 export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboardTourProps) => {
     const tourTriggeredRef = useRef(false);
-    
+
     const startTour = () => {
-        const isAdmin = user?.is_admin_access;
-        const isEvaluator = user?.evaluator_id && !isAdmin;
+        const isAdmin = user?.role === 'Administrator';
+        const isEvaluator = user?.role === 'Evaluator';
 
         const driverObj = driver({
             showProgress: true,
@@ -111,18 +112,18 @@ export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboa
     // Tour will NOT auto-start on page refresh or subsequent logins
     useEffect(() => {
         if (!user?._id || tourTriggeredRef.current) return;
-        
+
         const userId = user._id;
         const tourCompleted = hasEvaluatorTourBeenCompleted(userId);
         const isFirstLogin = getIsFirstLogin();
         const isFirstEver = isFirstEverLogin(userId);
-        
+
         // Only auto-start evaluator tour if:
         // 1. User is an evaluator (not admin)
         // 2. This is a fresh login (not page refresh)
         // 3. This is the user's first ever login
         // 4. Tour hasn't been completed before
-        if (user.evaluator_id && !user.is_admin_access && isFirstLogin && isFirstEver && !tourCompleted) {
+        if (user.role === 'Evaluator' && isFirstLogin && isFirstEver && !tourCompleted) {
             tourTriggeredRef.current = true;
             const timer = setTimeout(() => {
                 startTour();

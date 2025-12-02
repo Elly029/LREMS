@@ -17,6 +17,7 @@ interface User {
     name: string;
     token: string;
     access_rules?: AccessRule[];
+    role?: 'Administrator' | 'Facilitator' | 'Evaluator';
     is_admin_access?: boolean;
     evaluator_id?: string;
 }
@@ -140,7 +141,7 @@ export const MonitoringTable: React.FC<MonitoringTableProps> = ({
                     <div key={eventName} className="space-y-6">
                         <div className="border-b border-gray-200 pb-2 flex items-center justify-between">
                             <h2 className="text-2xl font-bold text-gray-900">{eventName}</h2>
-                            {user?.is_admin_access && onUpdateEventName && (
+                            {user?.role === 'Administrator' && onUpdateEventName && (
                                 <button
                                     onClick={() => setEditingEventName(eventName)}
                                     className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
@@ -231,7 +232,7 @@ export const MonitoringTable: React.FC<MonitoringTableProps> = ({
                                                                 </td>
                                                                 <td className="px-4 py-3 text-center">
                                                                     <div className="flex items-center justify-center gap-2">
-                                                                        {user?.is_admin_access && (
+                                                                        {user?.role === 'Administrator' && (
                                                                             <button
                                                                                 onClick={() => setEditingItem(item)}
                                                                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors"

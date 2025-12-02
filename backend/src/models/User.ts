@@ -15,6 +15,7 @@ export interface IUser extends Document {
     access_rules_version: number; // Incremented when access rules change - for cache invalidation
     is_admin_access?: boolean;
     evaluator_id?: string; // Link to Evaluator profile
+    role: 'Administrator' | 'Facilitator' | 'Evaluator';
     created_at: Date;
     updated_at: Date;
 }
@@ -63,6 +64,11 @@ const UserSchema: Schema = new Schema(
         evaluator_id: {
             type: String,
             default: null,
+        },
+        role: {
+            type: String,
+            enum: ['Administrator', 'Facilitator', 'Evaluator'],
+            default: 'Facilitator',
         },
     },
     {

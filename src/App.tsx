@@ -77,7 +77,7 @@ const App: React.FC = () => {
         // Mark as NOT first login since we're restoring from storage
         setIsFirstLogin(false);
 
-        if (parsedUser.evaluator_id && !parsedUser.is_admin_access) {
+        if (parsedUser.role === 'Evaluator') {
           setCurrentView('evaluator-dashboard');
         }
       } catch (error) {
@@ -108,7 +108,7 @@ const App: React.FC = () => {
       setIsFirstLogin(true);
 
       // Redirect to Evaluator Dashboard if user is an evaluator and not admin
-      if (response.evaluator_id && !response.is_admin_access) {
+      if (response.role === 'Evaluator') {
         setCurrentView('evaluator-dashboard');
       } else {
         setCurrentView('inventory');
@@ -210,7 +210,7 @@ const App: React.FC = () => {
       }
       const result = await bookApi.fetchBooks({
         limit: 1000,
-        adminView: user?.is_admin_access
+        adminView: user?.role === 'Administrator'
       });
       setBooks(result.books);
     } catch (err: any) {
@@ -670,11 +670,11 @@ const App: React.FC = () => {
 
   const filteredMonitoringData = useMemo(() => {
     if (!user) return [];
-    if (user.is_admin_access) return monitoringData;
+    if (user.role === 'Administrator') return monitoringData;
 
     return monitoringData.filter(item => {
       // If user is an evaluator, only show items where they are assigned
-      if (user.evaluator_id) {
+      if (user.role === 'Evaluator') {
         // Check if the evaluator's ID is in the item's evaluators list
         // Note: item.evaluators contains objects with _id or just strings depending on population
         // We need to check against the evaluator ID
@@ -775,7 +775,7 @@ const App: React.FC = () => {
       user={user}
       onLogout={handleLogout}
       onChangePassword={() => setIsChangePasswordModalOpen(true)}
-      onEditProfile={user?.evaluator_id ? handleEditProfile : undefined}
+      onEditProfile={user?.role === 'Evaluator' ? handleEditProfile : undefined}
       currentView={currentView}
       onViewChange={setCurrentView}
       onStartEvaluatorTour={() => evaluatorTourStartRef.current?.()}

@@ -117,5 +117,5 @@ export interface User {
   access_rules_version?: number; // For cache invalidation
   is_admin_access?: boolean;
   evaluator_id?: string;
-  role?: string;
+  role: 'Administrator' | 'Facilitator' | 'Evaluator';
 }

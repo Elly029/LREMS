@@ -19,7 +19,8 @@ interface User {
     name: string;
     username: string;
     access_rules?: AccessRule[];
-    is_admin_access?: boolean;
+    role?: 'Administrator' | 'Facilitator' | 'Evaluator';
+    is_admin_access?: boolean; // Keep for backward compatibility if needed, but prefer role
     evaluator_id?: string;
 }
 
@@ -56,7 +57,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
             setStats(statsData);
 
             // If user is an evaluator (not admin), auto-select their profile
-            if (user && user.evaluator_id && !user.is_admin_access) {
+            if (user && user.role === 'Evaluator' && user.evaluator_id) {
                 const evaluatorProfile = evalData.find(e => e._id === user.evaluator_id);
                 if (evaluatorProfile) {
                     setSelectedEvaluator(evaluatorProfile);
@@ -79,7 +80,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
         const intervalId = setInterval(() => {
             fetchData(false); // Silent refresh
         }, 30000);
-        
+
         return () => clearInterval(intervalId);
     }, [fetchData]);
 
@@ -87,7 +88,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
         let result = evaluators;
 
         // Filter by user access rules (if not admin)
-        if (user && user.access_rules && user.access_rules.length > 0 && !user.is_admin_access) {
+        if (user && user.access_rules && user.access_rules.length > 0 && user.role !== 'Administrator') {
             const isSuperAdmin = user.access_rules.some(rule => rule.learning_areas.includes('*'));
 
             if (!isSuperAdmin) {
@@ -122,7 +123,7 @@ export const EvaluatorDashboard: React.FC<EvaluatorDashboardProps> = ({ user, on
                 evaluator={selectedEvaluator}
                 onBack={() => setSelectedEvaluator(null)}
                 onRefresh={fetchData}
-                showBackButton={user?.is_admin_access}
+                showBackButton={user?.role === 'Administrator'}
             />
         );
     }

@@ -11,6 +11,7 @@ interface User {
     name: string;
     username: string;
     access_rules?: AccessRule[];
+    role?: 'Administrator' | 'Facilitator' | 'Evaluator';
     is_admin_access?: boolean;
 }
 
@@ -60,7 +61,7 @@ export const EvaluatorsList: React.FC<EvaluatorsListProps> = ({ onEdit, onDelete
         let result = evaluators;
 
         // Filter by user access rules (if not admin)
-        if (user && user.access_rules && user.access_rules.length > 0 && !user.is_admin_access) {
+        if (user && user.access_rules && user.access_rules.length > 0 && user.role !== 'Administrator') {
             // Check if user is super admin (has * access)
             const isSuperAdmin = user.access_rules.some(rule =>
                 rule.learning_areas.includes('*')

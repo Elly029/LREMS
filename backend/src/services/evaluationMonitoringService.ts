@@ -10,7 +10,7 @@ export class EvaluationMonitoringService {
   private isAdmin(user: IUser): boolean {
     const username = (user?.username || '').toLowerCase();
     if (username === 'jc' || username === 'nonie') return false;
-    return Boolean(user?.is_admin_access);
+    return user?.role === 'Administrator' || Boolean(user?.is_admin_access);
   }
 
   // Validate user access
@@ -99,7 +99,7 @@ export class EvaluationMonitoringService {
 
       // If user is an evaluator (has evaluator_id), filter by evaluator assignment
       // This happens after DB query to handle both string IDs and populated objects
-      if (user && (user as any).evaluator_id && !(user as any).is_admin_access) {
+      if (user && (user as any).evaluator_id && !((user as any).role === 'Administrator' || (user as any).is_admin_access)) {
         const evaluatorId = (user as any).evaluator_id;
         monitoringEntries = monitoringEntries.filter(entry => {
           return entry.evaluators && entry.evaluators.some((e: any) =>

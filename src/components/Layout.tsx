@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import { TourGuide } from './TourGuide';
 import { SkipNavLink } from './SkipNavLink';
-import { 
-    hasTourBeenCompleted, 
-    markTourCompleted, 
+import {
+    hasTourBeenCompleted,
+    markTourCompleted,
     getIsFirstLogin,
     isFirstEverLogin,
     markFirstLoginCompleted
@@ -12,7 +12,7 @@ import {
 
 interface LayoutProps {
     children: React.ReactNode;
-    user?: { _id: string; name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
+    user?: { _id: string; name: string; username: string; role?: 'Administrator' | 'Facilitator' | 'Evaluator' };
     onLogout?: () => void;
     onChangePassword?: () => void;
     onEditProfile?: () => void;
@@ -43,12 +43,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
     // Tour will NOT auto-start on page refresh or subsequent logins
     useEffect(() => {
         if (!user || tourTriggeredRef.current) return;
-        
+
         const userId = user._id;
         const tourCompleted = hasTourBeenCompleted(userId);
         const isFirstLogin = getIsFirstLogin();
         const isFirstEver = isFirstEverLogin(userId);
-        
+
         // Only auto-start tour if:
         // 1. This is a fresh login (not page refresh)
         // 2. This is the user's first ever login
@@ -187,7 +187,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                     {/* Navigation Tabs */}
                     <div className="mb-6 border-b border-gray-200 overflow-x-auto no-scrollbar" role="tablist" aria-label="Primary">
                         <div className="flex space-x-8 min-w-max">
-                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                            {user?.role !== 'Evaluator' && (
                                 <button
                                     onClick={() => onViewChange('inventory')}
                                     className={`${currentView === 'inventory' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -198,7 +198,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Inventory
                                 </button>
                             )}
-                            {user && (user.is_admin_access || user.evaluator_id) && (
+                            {(user?.role === 'Administrator' || user?.role === 'Evaluator') && (
                                 <button
                                     onClick={() => onViewChange('evaluator-dashboard')}
                                     className={`${currentView === 'evaluator-dashboard' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -209,7 +209,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Evaluator Dashboard
                                 </button>
                             )}
-                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                            {user?.role !== 'Evaluator' && (
                                 <button
                                     onClick={() => onViewChange('monitoring')}
                                     className={`${currentView === 'monitoring' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -220,7 +220,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Evaluation Monitoring
                                 </button>
                             )}
-                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                            {user?.role !== 'Evaluator' && (
                                 <button
                                     onClick={() => onViewChange('analytics')}
                                     className={`${currentView === 'analytics' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -231,7 +231,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Analytics
                                 </button>
                             )}
-                            {(!user?.evaluator_id || user?.is_admin_access) && (
+                            {user?.role !== 'Evaluator' && (
                                 <button
                                     onClick={() => onViewChange('evaluators')}
                                     className={`${currentView === 'evaluators' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -242,7 +242,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Evaluators
                                 </button>
                             )}
-                            {user && (user.is_admin_access || ['jc', 'nonie', 'admin-l', 'admin-c'].includes(user.username?.toLowerCase() || '')) && (
+                            {user?.role === 'Administrator' && (
                                 <button
                                     onClick={() => onViewChange('create-evaluation')}
                                     className={`${currentView === 'create-evaluation' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}
@@ -253,7 +253,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                                     Admin Access
                                 </button>
                             )}
-                            {user?.is_admin_access && (
+                            {user?.role === 'Administrator' && (
                                 <button
                                     onClick={() => onViewChange('design-guide')}
                                     className={`${currentView === 'design-guide' ? 'border-primary-600 text-primary-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 text-sm font-medium transition-colors`}

@@ -54,6 +54,7 @@ router.post('/login', async (req: Request, res: Response) => {
             access_rules_version: user.access_rules_version || 1,
             is_admin_access: user.is_admin_access,
             evaluator_id: user.evaluator_id,
+            role: user.role || (user.is_admin_access ? 'Administrator' : (user.evaluator_id ? 'Evaluator' : 'Facilitator')),
             token: generateToken((user._id as unknown) as string),
         });
     } catch (error) {
@@ -137,7 +138,8 @@ router.post('/validate', protect, async (req: Request, res: Response) => {
             valid: true,
             access_rules: user.access_rules,
             access_rules_version: currentVersion,
-            is_admin_access: user.is_admin_access
+            is_admin_access: user.is_admin_access,
+            role: user.role || (user.is_admin_access ? 'Administrator' : (user.evaluator_id ? 'Evaluator' : 'Facilitator'))
         });
     } catch (error) {
         console.error('Validation error:', error);

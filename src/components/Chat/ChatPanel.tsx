@@ -9,6 +9,7 @@ interface ChatPanelProps {
     currentUser: {
         _id: string;
         name: string;
+        role?: 'Administrator' | 'Facilitator' | 'Evaluator';
         is_admin_access?: boolean;
         evaluator_id?: string;
     };
@@ -164,7 +165,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
         if (!newMessage.trim()) return;
 
         try {
-            if (viewMode === 'broadcast' && currentUser.is_admin_access) {
+            if (viewMode === 'broadcast' && currentUser.role === 'Administrator') {
                 await chatService.sendBroadcast(newMessage.trim(), broadcastTarget);
                 setViewMode('conversations');
                 setNewMessage('');
@@ -327,7 +328,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose, currentUs
                                     New Group
                                 </button>
                             </div>
-                            {currentUser.is_admin_access && (
+                            {currentUser.role === 'Administrator' && (
                                 <button
                                     onClick={() => { setViewMode('broadcast'); setSelectedConversation(null); }}
                                     className={`w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${viewMode === 'broadcast'
