@@ -167,7 +167,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
       margin: { top: 35, left: 14, right: 20, bottom: 40 },
       showHead: 'everyPage',
       didDrawPage: (data: any) => {
-        const pageCount = doc.internal.getNumberOfPages();
+        const pageCount = doc.getNumberOfPages();
         const pageNumber = data.pageNumber;
 
         // Add header on every page except the first
