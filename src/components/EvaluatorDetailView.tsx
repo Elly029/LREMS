@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { nsKey, getCurrentUserId } from '../utils/persistence';
 import { EvaluatorProfile } from '../services/evaluatorService';
 import { evaluatorDashboardService } from '../services/evaluatorDashboardService';
 import { Spinner } from './ui/Spinner';
@@ -43,7 +44,9 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
     const [stats, setStats] = useState<EvaluatorStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [groupBy, setGroupBy] = useState<GroupBy>(() => {
-        const saved = typeof window !== 'undefined' ? window.localStorage.getItem('evaluator_group_by') as GroupBy | null : null;
+        const uid = getCurrentUserId();
+        const key = uid ? nsKey(uid, 'evaluator_group_by') : 'evaluator_group_by';
+        const saved = typeof window !== 'undefined' ? window.localStorage.getItem(key) as GroupBy | null : null;
         return saved ?? 'event';
     });
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -58,7 +61,11 @@ export const EvaluatorDetailView: React.FC<EvaluatorDetailViewProps> = ({ evalua
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            window.localStorage.setItem('evaluator_group_by', groupBy);
+            {
+                const uid = getCurrentUserId();
+                const key = uid ? nsKey(uid, 'evaluator_group_by') : 'evaluator_group_by';
+                window.localStorage.setItem(key, groupBy);
+            }
         }
         // Refresh expanded groups when groupBy changes
         const groups = new Set<string>();

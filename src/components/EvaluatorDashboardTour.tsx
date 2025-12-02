@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { nsKey } from '../utils/persistence';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './EvaluatorDashboardTour.css';
@@ -85,8 +86,13 @@ export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboa
                 }
             ],
             onDestroyed: () => {
-                // Save tour completion status
-                localStorage.setItem('evaluatorDashboardTourCompleted', 'true');
+                const keyUserId = user?.username ? undefined : undefined;
+                const uid = (user as any)?._id as string | undefined;
+                if (uid) {
+                    localStorage.setItem(nsKey(uid, 'evaluatorDashboardTourCompleted'), 'true');
+                } else {
+                    localStorage.setItem('evaluatorDashboardTourCompleted', 'true');
+                }
                 if (onComplete) {
                     onComplete();
                 }
@@ -98,7 +104,8 @@ export const useEvaluatorDashboardTour = ({ user, onComplete }: EvaluatorDashboa
 
     useEffect(() => {
         // Check if tour has been completed before
-        const tourCompleted = localStorage.getItem('evaluatorDashboardTourCompleted');
+        const uid = (user as any)?._id as string | undefined;
+        const tourCompleted = uid ? localStorage.getItem(nsKey(uid, 'evaluatorDashboardTourCompleted')) : localStorage.getItem('evaluatorDashboardTourCompleted');
 
         // Auto-start tour if not completed (optional - can be disabled)
         // if (!tourCompleted) {

@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react';
+import { nsKey, getCurrentUserId } from '../utils/persistence';
 
 interface UseFilterPersistenceOptions<T> {
   key: string;
   defaultValue: T;
   storage?: 'session' | 'local';
+  userId?: string;
 }
 
 export function useFilterPersistence<T>({
   key,
   defaultValue,
-  storage = 'session'
+  storage = 'session',
+  userId
 }: UseFilterPersistenceOptions<T>): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   const storageObject = storage === 'session' ? sessionStorage : localStorage;
+  const resolvedUserId = userId ?? getCurrentUserId();
+  const resolvedKey = resolvedUserId ? nsKey(resolvedUserId, key) : key;
 
   const [state, setState] = useState<T>(() => {
     try {
-      const item = storageObject.getItem(key);
+      const item = storageObject.getItem(resolvedKey) ?? storageObject.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
       console.error(`Error loading ${key} from ${storage}Storage:`, error);
@@ -25,16 +30,16 @@ export function useFilterPersistence<T>({
 
   useEffect(() => {
     try {
-      storageObject.setItem(key, JSON.stringify(state));
+      storageObject.setItem(resolvedKey, JSON.stringify(state));
     } catch (error) {
       console.error(`Error saving ${key} to ${storage}Storage:`, error);
     }
-  }, [key, state, storageObject, storage]);
+  }, [resolvedKey, key, state, storageObject, storage]);
 
   const clearState = () => {
     setState(defaultValue);
     try {
-      storageObject.removeItem(key);
+      storageObject.removeItem(resolvedKey);
     } catch (error) {
       console.error(`Error removing ${key} from ${storage}Storage:`, error);
     }

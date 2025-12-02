@@ -15,6 +15,7 @@ import { EvaluatorsList } from './components/EvaluatorsList';
 import { ExportButtons } from './components/ExportButtons';
 import { LoginPage } from './components/LoginPage';
 import { apiClient } from './services/api';
+import { clearAllPersistence, nsKey, validateStorageIsolation, setCurrentUserId, migrateLegacyKey } from './utils/persistence';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { MonitoringTable } from './components/MonitoringTable';
 
@@ -57,16 +58,16 @@ const App: React.FC = () => {
   // Tour handler reference
   const evaluatorTourStartRef = useRef<(() => void) | null>(null);
 
-  // Restore user session from localStorage on app initialization
   useEffect(() => {
+    validateStorageIsolation(null);
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         apiClient.setToken(parsedUser.token);
-
-        // Set initial view based on role
+        setCurrentUserId(parsedUser._id);
+        validateStorageIsolation(parsedUser._id);
         if (parsedUser.evaluator_id && !parsedUser.is_admin_access) {
           setCurrentView('evaluator-dashboard');
         }
@@ -81,10 +82,12 @@ const App: React.FC = () => {
   const handleLogin = async (username: string, password: string) => {
     try {
       const response = await apiClient.post<User>('/auth/login', { username, password });
+      await clearAllPersistence();
       setUser(response);
       apiClient.setToken(response.token);
-      // Persist to localStorage
       localStorage.setItem('user', JSON.stringify(response));
+      setCurrentUserId(response._id);
+      validateStorageIsolation(response._id);
 
       // Redirect to Evaluator Dashboard if user is an evaluator and not admin
       if (response.evaluator_id && !response.is_admin_access) {
@@ -116,11 +119,11 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUser(null);
     apiClient.setToken(null);
-    // Clear from localStorage
-    localStorage.removeItem('user');
+    setCurrentUserId(null);
+    await clearAllPersistence();
   };
 
   // Data state
@@ -129,22 +132,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // UI state with persistence
-  const [filters, setFilters] = useState<Partial<Record<keyof Book, string | Status[]>>>(() => {
-    try {
-      const savedFilters = sessionStorage.getItem('bookFilters');
-      return savedFilters ? JSON.parse(savedFilters) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [sortConfig, setSortConfig] = useState<SortConfig<Book>>(() => {
-    try {
-      const savedSort = sessionStorage.getItem('bookSort');
-      return savedSort ? JSON.parse(savedSort) : { key: 'bookCode', direction: 'ascending' };
-    } catch {
-      return { key: 'bookCode', direction: 'ascending' };
-    }
-  });
+  const [filters, setFilters] = useState<Partial<Record<keyof Book, string | Status[]>>>({});
+  const [sortConfig, setSortConfig] = useState<SortConfig<Book>>({ key: 'bookCode', direction: 'ascending' });
 
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -155,13 +144,7 @@ const App: React.FC = () => {
   const [isAddRemarkModalOpen, setIsAddRemarkModalOpen] = useState(false);
   const [bookForNewRemark, setBookForNewRemark] = useState<Book | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState(() => {
-    try {
-      return sessionStorage.getItem('bookSearch') || '';
-    } catch {
-      return '';
-    }
-  });
+  const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 1000); // Increased from 300ms to 1000ms
 
   const [isFiltering, setIsFiltering] = useState(false);
@@ -494,8 +477,10 @@ const App: React.FC = () => {
   const handleClearFilters = () => {
     setFilters({});
     setSearchTerm('');
-    sessionStorage.removeItem('bookFilters');
-    sessionStorage.removeItem('bookSearch');
+    if (user) {
+      sessionStorage.removeItem(nsKey(user._id, 'bookFilters'));
+      sessionStorage.removeItem(nsKey(user._id, 'bookSearch'));
+    }
   };
 
   // Dashboard stats - responsive to filters
@@ -935,3 +920,59 @@ const App: React.FC = () => {
 };
 
 export default App;
+  useEffect(() => {
+    if (user) {
+      const uid = user._id;
+      try {
+        const savedFilters = sessionStorage.getItem(nsKey(uid, 'bookFilters')) || sessionStorage.getItem('bookFilters');
+        const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
+        setFilters(parsedFilters);
+        if (sessionStorage.getItem('bookFilters')) migrateLegacyKey(sessionStorage, 'bookFilters', uid);
+      } catch {
+        setFilters({});
+      }
+      try {
+        const savedSort = sessionStorage.getItem(nsKey(uid, 'bookSort')) || sessionStorage.getItem('bookSort');
+        const parsedSort = savedSort ? JSON.parse(savedSort) : { key: 'bookCode', direction: 'ascending' };
+        setSortConfig(parsedSort);
+        if (sessionStorage.getItem('bookSort')) migrateLegacyKey(sessionStorage, 'bookSort', uid);
+      } catch {
+        setSortConfig({ key: 'bookCode', direction: 'ascending' });
+      }
+      try {
+        const savedSearch = sessionStorage.getItem(nsKey(uid, 'bookSearch')) || sessionStorage.getItem('bookSearch');
+        setSearchTerm(savedSearch || '');
+        if (sessionStorage.getItem('bookSearch')) migrateLegacyKey(sessionStorage, 'bookSearch', uid);
+      } catch {
+        setSearchTerm('');
+      }
+    } else {
+      setFilters({});
+      setSortConfig({ key: 'bookCode', direction: 'ascending' });
+      setSearchTerm('');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookFilters'), JSON.stringify(filters));
+      } catch {}
+    }
+  }, [user, filters]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookSort'), JSON.stringify(sortConfig));
+      } catch {}
+    }
+  }, [user, sortConfig]);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        sessionStorage.setItem(nsKey(user._id, 'bookSearch'), searchTerm);
+      } catch {}
+    }
+  }, [user, searchTerm]);

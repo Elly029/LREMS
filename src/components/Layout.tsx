@@ -5,7 +5,7 @@ import { SkipNavLink } from './SkipNavLink';
 
 interface LayoutProps {
     children: React.ReactNode;
-    user?: { name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
+    user?: { _id: string; name: string; username: string; is_admin_access?: boolean; evaluator_id?: string };
     onLogout?: () => void;
     onChangePassword?: () => void;
     onEditProfile?: () => void;
@@ -31,11 +31,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Auto-start tour for first-time users
     useEffect(() => {
-        const hasSeenTour = localStorage.getItem('hasSeenTour');
+        const key = user ? `${'bdms'}:${user._id}:hasSeenTour` : null;
+        const hasSeenTour = key ? localStorage.getItem(key) : null;
         if (!hasSeenTour && user) {
-            // Small delay to ensure UI is ready
             const timer = setTimeout(() => {
                 setIsTourActive(true);
             }, 1500);
@@ -49,7 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, onChan
                 startTour={isTourActive}
                 onTourEnd={() => {
                     setIsTourActive(false);
-                    localStorage.setItem('hasSeenTour', 'true');
+                    if (user) localStorage.setItem(`${'bdms'}:${user._id}:hasSeenTour`, 'true');
                 }}
             />
 
