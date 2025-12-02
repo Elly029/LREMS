@@ -120,10 +120,12 @@ export const bookApi = {
         if (bookData.gradeLevel !== undefined) backendData.gradeLevel = bookData.gradeLevel;
         if (bookData.publisher) backendData.publisher = bookData.publisher;
         if (bookData.title) backendData.title = bookData.title;
-        if (bookData.status) backendData.status = bookData.status;
+        if (bookData.status !== undefined) backendData.status = bookData.status;
         if (bookData.isNew !== undefined) backendData.isNew = bookData.isNew;
         if (bookData.ntpDate !== undefined) backendData.ntpDate = bookData.ntpDate;
         if (bookData.remark) backendData.remark = bookData.remark;
+
+        console.log('Updating book with data:', backendData);
 
         const response = await apiClient.put<ApiResponse>(`/books/${bookCode}`, backendData);
         const updated = transformBookFromBackend(response.data);
@@ -153,7 +155,7 @@ export const bookApi = {
 
         console.log('Sending remark data:', backendData);
         const response = await apiClient.post<ApiResponse>(`/books/${bookCode}/remarks`, backendData);
-        
+
         const created = {
             id: response.data._id,
             text: response.data.text,

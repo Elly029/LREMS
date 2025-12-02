@@ -383,7 +383,10 @@ export class BookService {
 
       if (Object.keys(updateFields).length > 0) {
         const statusChanged = updateFields.status !== undefined && updateFields.status !== existingBook.status;
+
+        logger.info(`Attempting to update book ${bookCode} with fields:`, updateFields);
         await BookModel.updateOne({ book_code: bookCode }, updateFields);
+        logger.info(`Database update completed for ${bookCode}`);
 
         // If bookCode changed, update remarks
         if (newBookCode !== bookCode) {

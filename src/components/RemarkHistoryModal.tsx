@@ -5,15 +5,6 @@ import logo from '../assets/logo.png';
 import { EditRemarkModal } from './EditRemarkModal';
 import { bookApi } from '../services/bookService';
 
-// TypeScript declarations for global libraries from CDN
-declare const jspdf: any;
-declare const XLSX: any;
-
-// Extend jsPDF with autotable
-interface jsPDFWithAutoTable {
-  autoTable: (options: any) => any;
-}
-
 interface RemarkHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -70,6 +61,12 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     return dateA - dateB; // Ascending order (oldest first)
   });
 
+  const generalRemarks = [...(book.remarks || [])].sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+    return timeB - timeA;
+  });
+
   // Helper function to check if a remark has complete data for export
   const isRemarkComplete = (remark: Remark): boolean => {
     // A remark must have ALL of these to be included in export:
@@ -84,11 +81,12 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     return hasDateRange && hasFromEntity && hasToEntity;
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     // Filter out incomplete remarks for export
     const remarksToExport = sortedRemarks.filter(isRemarkComplete);
-    
-    const doc = new jspdf.jsPDF();
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    const doc = new jsPDF();
 
     // Add Logo on the left
     const logoSize = 30;
@@ -127,7 +125,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     const totalDays = totalDepEd + totalPublisher;
 
     // Add table to PDF with custom header structure and page break handling
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [
         [
           { content: 'Timeline/Date', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
@@ -212,8 +210,8 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     }
 
     // Add summary table on the right side
-    const summaryTableX = 140; // Position on the right
-    (doc as any).autoTable({
+    const summaryTableX = 140;
+    autoTable(doc, {
       body: [
         ['Total', totalDays.toString()],
         ['DepEd', totalDepEd.toString()],
@@ -274,10 +272,10 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     doc.save(`quality-assurance-${book.bookCode}.pdf`);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     // Filter out incomplete remarks for export
     const remarksToExport = sortedRemarks.filter(isRemarkComplete);
-    
+    const XLSX = await import('xlsx');
     // Prepare data for export with the specified header format
     const exportData = remarksToExport.map(remark => ({
       'Timeline/Date': formatDateRange(remark.fromDate, remark.toDate),
@@ -331,7 +329,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     XLSX.writeFile(wb, `quality-assurance-${book.bookCode}.xlsx`);
   };
 
-  const handleExportAllRemarks = () => {
+  const handleExportAllRemarks = async () => {
     // Export ALL remarks (including incomplete ones) as a log
     const exportData = sortedRemarks.map((remark, index) => ({
       'Entry #': index + 1,
@@ -365,6 +363,7 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
     });
 
     // Create worksheet
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.json_to_sheet(exportData);
 
     // Create workbook
@@ -452,113 +451,144 @@ export const RemarkHistoryModal: React.FC<RemarkHistoryModalProps> = ({ isOpen, 
             For: <span className="font-semibold text-gray-700">{book.title}</span>
           </p>
 
-          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4">
-            {sortedRemarks.length > 0 ? (
-              sortedRemarks.map((remark, index) => (
-                <div key={index} className="bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-500 rounded-lg p-5 shadow-sm">
-                  {/* Header with timestamp and creator */}
-                  <div className="flex justify-between items-start mb-3 pb-2 border-b border-gray-200">
-                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
-                      Entry #{index + 1}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEditRemark(remark, index)}
-                        className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-md hover:bg-blue-50"
-                        title="Edit remark"
-                      >
-                        <EditIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRemark(remark.id || index.toString(), index)}
-                        className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
-                        title="Delete remark"
-                      >
-                        <DeleteIcon className="h-4 w-4" />
-                      </button>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-700">
-                          {formatTimestamp(remark.timestamp)}
+          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-8">
+            <div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">Remarks</h3>
+                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">Newest First</span>
+              </div>
+              <div className="mt-3 space-y-4">
+                {generalRemarks.length > 0 ? (
+                  generalRemarks.map((remark, index) => (
+                    <div key={`general-${index}`} className="bg-gradient-to-r from-gray-50 to-white border-l-4 border-gray-400 rounded-lg p-5 shadow-sm">
+                      <div className="flex justify-between items-start mb-3 pb-2 border-b border-gray-200">
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Remark #{index + 1}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditRemark(remark, index)}
+                            className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-md hover:bg-gray-50"
+                            title="Edit remark"
+                          >
+                            <EditIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRemark(remark.id || index.toString(), index)}
+                            className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
+                            title="Delete remark"
+                          >
+                            <DeleteIcon className="h-4 w-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-gray-700">{formatTimestamp(remark.timestamp)}</div>
+                            {remark.createdBy && (
+                              <div className="text-xs text-gray-500 mt-1">by {remark.createdBy}</div>
+                            )}
+                          </div>
                         </div>
-                        {remark.createdBy && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            by {remark.createdBy}
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase">Remark/Notes</span>
+                        <div className="text-sm text-gray-800 mt-1 bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap">{remark.text}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-400">No remarks</div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-blue-900">Chronological Process on Quality Assurance</h3>
+                <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600">Oldest First</span>
+              </div>
+              <div className="mt-3 space-y-4">
+                {sortedRemarks.length > 0 ? (
+                  sortedRemarks.map((remark, index) => (
+                    <div key={`qa-${index}`} className="bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-500 rounded-lg p-5 shadow-sm">
+                      <div className="flex justify-between items-start mb-3 pb-2 border-b border-gray-200">
+                        <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Entry #{index + 1}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditRemark(remark, index)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-md hover:bg-blue-50"
+                            title="Edit remark"
+                          >
+                            <EditIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRemark(remark.id || index.toString(), index)}
+                            className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
+                            title="Delete remark"
+                          >
+                            <DeleteIcon className="h-4 w-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-gray-700">{formatTimestamp(remark.timestamp)}</div>
+                            {remark.createdBy && (
+                              <div className="text-xs text-gray-500 mt-1">by {remark.createdBy}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {remark.from && (
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">From</span>
+                            <div className="text-sm font-medium text-gray-800 mt-1">{remark.from}</div>
+                          </div>
+                        )}
+                        {remark.to && (
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">To</span>
+                            <div className="text-sm font-medium text-gray-800 mt-1">{remark.to}</div>
                           </div>
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* QA Process Details Grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    {remark.from && (
+                      {remark.status && (
+                        <div className="mb-3">
+                          <span className="text-xs font-semibold text-gray-500 uppercase">Status</span>
+                          <div className="text-sm text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">{remark.status}</div>
+                        </div>
+                      )}
+                      {(remark.fromDate || remark.toDate) && (
+                        <div className="mb-3">
+                          <span className="text-xs font-semibold text-gray-500 uppercase">Date Range</span>
+                          <div className="text-sm text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">{formatDateRange(remark.fromDate, remark.toDate)}</div>
+                        </div>
+                      )}
+                      {(remark.daysDelayDeped !== undefined || remark.daysDelayPublisher !== undefined) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                          <div className="bg-blue-50 p-2 rounded">
+                            <span className="text-xs font-semibold text-blue-700">DepEd Delay</span>
+                            <div className="text-sm font-bold text-blue-900">{remark.daysDelayDeped || 0} days</div>
+                          </div>
+                          <div className="bg-green-50 p-2 rounded">
+                            <span className="text-xs font-semibold text-green-700">Publisher Delay</span>
+                            <div className="text-sm font-bold text-green-900">{remark.daysDelayPublisher || 0} days</div>
+                          </div>
+                        </div>
+                      )}
                       <div>
-                        <span className="text-xs font-semibold text-gray-500 uppercase">From</span>
-                        <div className="text-sm font-medium text-gray-800 mt-1">{remark.from}</div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase">Remark/Notes</span>
+                        <div className="text-sm text-gray-800 mt-1 bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap">{remark.text}</div>
                       </div>
-                    )}
-                    {remark.to && (
-                      <div>
-                        <span className="text-xs font-semibold text-gray-500 uppercase">To</span>
-                        <div className="text-sm font-medium text-gray-800 mt-1">{remark.to}</div>
-                      </div>
-                    )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">No chronological records found</div>
+                    <button
+                      onClick={onClose}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
                   </div>
-
-                  {/* Status */}
-                  {remark.status && (
-                    <div className="mb-3">
-                      <span className="text-xs font-semibold text-gray-500 uppercase">Status</span>
-                      <div className="text-sm text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">
-                        {remark.status}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Date Range */}
-                  {(remark.fromDate || remark.toDate) && (
-                    <div className="mb-3">
-                      <span className="text-xs font-semibold text-gray-500 uppercase">Date Range</span>
-                      <div className="text-sm text-gray-800 mt-1 bg-white p-2 rounded border border-gray-200">
-                        {formatDateRange(remark.fromDate, remark.toDate)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Days Covered and Delays */}
-                  {(remark.daysDelayDeped !== undefined || remark.daysDelayPublisher !== undefined) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-                      <div className="bg-blue-50 p-2 rounded">
-                        <span className="text-xs font-semibold text-blue-700">DepEd Delay</span>
-                        <div className="text-sm font-bold text-blue-900">{remark.daysDelayDeped || 0} days</div>
-                      </div>
-                      <div className="bg-green-50 p-2 rounded">
-                        <span className="text-xs font-semibold text-green-700">Publisher Delay</span>
-                        <div className="text-sm font-bold text-green-900">{remark.daysDelayPublisher || 0} days</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Remark Text */}
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase">Remark/Notes</span>
-                    <div className="text-sm text-gray-800 mt-1 bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap">
-                      {remark.text}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4">No chronological records found</div>
-                <button
-                  onClick={onClose}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-200">
